@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>TUM Market Profile</title>
+
+<link rel="stylesheet" href="profile.css">
+
+</head>
+<body>
+
+<div class="profile-page">
+
+    <div class="profile-topbar">
+        <a href="/" class="back-btn">
+            ← Back to Marketplace
+        </a>
+        <button id="logoutBtn" class="logout-btn" type="button">
+            Logout
+        </button>
+    </div>
+
+    <!-- PROFILE HEADER -->
+    <div class="profile-header">
+
+        <div class="profile-left">
+
+            <div class="profile-image-container">
+
+                <img
+                    src="https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                    id="profilePageImage"
+                    class="profile-image"
+                >
+
+                <div class="upload-btn">
+                    <input type="file" id="changeProfilePic">
+                </div>
+
+            </div>
+
+            <div class="profile-info">
+
+                <h1 id="profileName">
+                    Student User
+                </h1>
+
+                <p class="profile-role">
+                    TUM Marketplace Member
+                </p>
+
+                <div class="account-meta">
+                    <span class="account-label">Email</span>
+                    <strong id="profileEmailLabel">info@example.com</strong>
+                </div>
+
+                <div class="account-badge" id="accountId">
+                    Account ID: #000001
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- STATS -->
+    <div class="profile-stats">
+
+        <div class="stat-card">
+            <h2 id="adsCount">0</h2>
+            <p>Ads Posted</p>
+        </div>
+
+        <div class="stat-card">
+            <h2 id="activeCount">0</h2>
+            <p>Active Listings</p>
+        </div>
+
+        <div class="stat-card">
+            <h2>Active</h2>
+            <p>Account Status</p>
+        </div>
+
+    </div>
+
+    <!-- LISTINGS -->
+    <h2 class="section-title">
+        My Listings
+    </h2>
+
+    <div class="user-listings" id="userListings">
+
+    </div>
+
+</div>
+
+<script>
+
+/* USER SESSION */
+const currentUser = localStorage.getItem("tum_market_user");
+const currentEmail = localStorage.getItem("tum_market_user_email");
+const currentUserId = localStorage.getItem("tum_market_user_id");
+
+/* SECURITY */
+if(!currentUser || !currentEmail || !currentUserId){
+    window.location.href = "/";
+}
+
+/* PROFILE INFO */
+document.getElementById("profileName").innerText = currentUser;
+document.getElementById("profileEmailLabel").innerText = currentEmail;
+
+document.getElementById("logoutBtn").addEventListener("click", () => {
+    localStorage.removeItem("tum_market_user");
+    localStorage.removeItem("tum_market_user_email");
+    localStorage.removeItem("tum_market_user_id");
+    window.location.href = "/";
+});
+
+/* ACCOUNT ID */
+document.getElementById("accountId").innerText =
+"Account ID: #" + currentUserId;
+
+/* PROFILE PICTURE */
+const savedPic = localStorage.getItem(`profile_picture_${currentUserId}`);
+
+if(savedPic){
+    document.getElementById("profilePageImage").src = savedPic;
+}
+
+/* CHANGE PROFILE PIC */
+document.getElementById("changeProfilePic")
+.addEventListener("change", function(){
+
+    const file = this.files[0];
+
+    if(file){
+        const reader = new FileReader();
+
+        reader.onload = function(e){
+
+            localStorage.setItem(
+                `profile_picture_${currentUserId}`,
+                e.target.result
+            );
+
+            document.getElementById("profilePageImage").src = e.target.result;
+        };
+
+        reader.readAsDataURL(file);
+    }
+});
+
+/* LOAD LISTINGS */
+fetch('/api/listings')
+.then(res => res.json())
+.then(data => {
+
+    const listings = data.listings || [];
+
+    const myAds = listings.filter(item =>
+        Number(item.user_id) === Number(currentUserId)
+    );
+
+    const activeItems = myAds.filter(item => !item.sold);
+    const soldItems = myAds.filter(item => item.sold);
+
+    document.getElementById("adsCount").innerText = myAds.length;
+    document.getElementById("activeCount").innerText = activeItems.length;
+
+    const container = document.getElementById("userListings");
+    container.innerHTML = "";
+
+    if(myAds.length === 0){
+
+        container.innerHTML = `
+        <div class="empty-state">
+            <h2>No Listings Yet</h2>
+            <br>
+            <p>Your posted ads will appear here.</p>
+        </div>`;
+        return;
+    }
+
+    activeItems.forEach(item => {
+
+        container.innerHTML += `
+        <div class="listing-card">
+
+            <div class="card-image">
+                <img src="${item.image}">
+            </div>
+
+            <div class="card-info">
+
+                <div class="price">
+                    Ksh ${item.price}
+                </div>
+
+                <h4>${item.title}</h4>
+
+                <div class="location">
+                    ${item.location}
+                </div>
+
+                <div class="card-buttons">
+
+                    <button
+                        class="sold-btn"
+                        onclick="markAsSold(${item.id})"
+                    >
+                        Mark As Sold
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>`;
+    });
+
+});
+
+/* MARK AS SOLD */
+function markAsSold(id){
+
+    if(!confirm("Mark this item as SOLD?")){
+        return;
+    }
+
+    fetch(`/api/listings/${id}/sold`, {
+        method: 'PATCH'
+    })
+    .then(res => res.json())
+    .then(data => {
+
+        alert(data.message);
+        location.reload();
+
+    })
+    .catch(() => {
+        alert("Could not update item.");
+    });
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TUM Market</title>
+
+    <!-- CSS FILE -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <header class="navbar">
+
+        <div class="logo">
+            <span class="brand">TUMMarket</span>
+            <small class="tagline">Buy, Sell &amp; Connect at TUM</small>
+        </div>
+        <div id="auth-area"></div>
+
+        <nav class="nav-links">
+            <a href="javascript:void(0)" class="nav-link active" data-nav="all">All</a>
+            <a href="javascript:void(0)" class="nav-link" data-nav="electronics">Electronics</a>
+            <a href="javascript:void(0)" class="nav-link" data-nav="hostels">Hostels</a>
+            <a href="javascript:void(0)" class="nav-link" data-nav="fashion">Fashion</a>
+
+            <a href="javascript:void(0)" class="btn-login">Login</a>
+            <a href="javascript:void(0)" class="btn-post">Post Ad</a>
+
+            <a href="javascript:void(0)" id="notificationBtn">
+                🔔
+                <span id="notiBadge">3</span>
+            </a>
+
+            <div class="notification-dropdown" id="notificationDropdown">
+                <div id="notificationList">
+                    <div class="noti-item">
+                        Loading notifications...
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+    </header>
+
+    <!-- SEARCH SECTION -->
+    <section class="search-section">
+
+        <form class="search-bar">
+
+            <input type="text" placeholder="Search products...">
+
+            <select>
+                <option value="">All Categories</option>
+                <option value="electronics">Electronics</option>
+                <option value="hostels">Hostels</option>
+                <option value="fashion">Fashion</option>
+                <option value="bedrooms">Bedrooms &amp; Mattresses</option>
+                <option value="appliances">Home Appliances</option>
+                <option value="services">Services</option>
+            </select>
+
+            <button type="submit">
+                Search
+            </button>
+
+        </form>
+
+    </section>
+
+    <!-- CATEGORY CARDS -->
+    <section class="categories">
+
+    <div class="category-card" data-category="electronics">
+        Electronics
+    </div>
+
+    <div class="category-card" data-category="hostels">
+        Hostels
+    </div>
+
+    <div class="category-card" data-category="fashion">
+        Fashion
+    </div>
+
+    <div class="category-card" data-category="bedrooms">
+        Bedrooms & Mattresses
+    </div>
+
+    <div class="category-card" data-category="appliances">
+        Home Appliances
+    </div>
+
+    <div class="category-card" data-category="services">
+        Services
+    </div>
+
+</section>
+    <!-- MARKET LISTINGS -->
+    <main id="listingsContainer">
+
+        <!-- JavaScript listings will appear here -->
+
+    </main>
+
+    <!-- POST AD MODAL -->
+    <div class="modal" id="adModal">
+
+        <div class="modal-content">
+
+            <span class="close-btn" id="closeModalBtn">
+                &times;
+            </span>
+
+            <h2>Post Advertisement</h2>
+
+            <form id="postAdForm">
+
+                <input type="text" id="adTitle" placeholder="Item title" required>
+
+                <input type="number" id="adPrice" placeholder="Price" required>
+
+                <input type="text" id="adLocation" placeholder="Location" required>
+
+                <select id="adCategory" required>
+                    <option value="">Select Category</option>
+                    <option value="electronics">Electronics</option>
+                    <option value="hostels">Hostels</option>
+                    <option value="fashion">Fashion</option>
+                    <option value="bedrooms">Bedrooms &amp; Mattresses</option>
+                    <option value="appliances">Home Appliances</option>
+                    <option value="services">Services</option>
+                </select>
+
+                <select id="adTier">
+                    <option value="free">Free Listing</option>
+                    <option value="featured">Featured Listing</option>
+                </select>
+
+                <input type="text" id="adPhone" placeholder="M-Pesa Phone Number">
+
+                <input type="file" id="adImage" accept="image/*">
+
+                <div id="imagePreviewContainer" style="display:none;">
+
+                    <img id="imagePreview" src="" alt="Preview">
+
+                </div>
+
+                <button type="submit">
+                    Post Advertisement
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+    <!-- AUTH MODAL -->
+    <div class="modal" id="authModal">
+
+        <div class="modal-content">
+
+            <span class="close-btn" id="closeAuthBtn">
+                &times;
+            </span>
+
+            <h2 id="authTitle">
+                Login to TUM Market
+            </h2>
+
+            <form id="authForm">
+
+                <div id="nameGroup" style="display:none;">
+
+                    <input type="text" id="authName" placeholder="Full Name">
+
+                </div>
+
+                <input type="email" id="authEmail" placeholder="Email Address" required>
+
+                <input type="password" id="authPassword" placeholder="Password" required>
+
+                <button type="submit" id="authSubmitBtn">
+                    Login
+                </button>
+
+            </form>
+
+            <br>
+
+            <a href="#" id="toggleAuthMode">
+                Don't have an account? Sign up
+            </a>
+
+        </div>
+
+    </div>
+
+    <!-- DETAILS MODAL -->
+    <div class="modal" id="detailsModal">
+
+        <div class="modal-content">
+
+            <span class="close-btn"
+                  onclick="document.getElementById('detailsModal').classList.remove('active')">
+                &times;
+            </span>
+
+            <div id="detailsModalBody">
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- PAYMENT OVERLAY -->
+    <div class="modal" id="paymentOverlay">
+
+        <div class="modal-content">
+
+            <h2 id="statusMessage">
+                Processing payment...
+            </h2>
+
+        </div>
+
+    </div>
+
+    <!-- AI ASSISTANT WIDGET -->
+    <div class="assistant-widget" id="assistantWidget">
+        <button class="assistant-toggle" id="assistantToggle" aria-label="Open help chat">💬</button>
+        <div class="assistant-panel" id="assistantPanel" aria-hidden="true">
+            <div class="assistant-header">
+                <span>Help Assistant</span>
+                <button type="button" id="assistantClose" aria-label="Close chat">×</button>
+            </div>
+            <div class="assistant-messages" id="assistantMessages">
+                <div class="assistant-message bot">Hello! Need help searching, posting an ad, or managing your account?</div>
+            </div>
+            <form class="assistant-form" id="assistantForm">
+                <input type="text" id="assistantInput" placeholder="Ask me anything..." autocomplete="off">
+                <button type="submit">Send</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT FILE -->
+    <script src="script.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,14 @@
+[
+    {
+        "type": "update",
+        "title": "System Update",
+        "message": "TUM Market v2.0 is live! Enjoy faster search speeds.",
+        "time": "Just now"
+    },
+    {
+        "type": "news",
+        "title": "Market News",
+        "message": "Welcome to the new semester! Start listing your old textbooks.",
+        "time": "Today"
+    }
+]
