@@ -7,3 +7,4 @@ SQLAlchemy>=2.0.0
 cloudinary>=1.36.0
 Flask-Limiter>=3.8.0
 redis>=5.0.0
+python-dotenv>=1.0.1

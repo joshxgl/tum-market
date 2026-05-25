@@ -99,8 +99,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     window.markAsSold = async (id) => {
         const res = await requestJson(`/api/listings/${id}/sold`, { method: 'PATCH' });
-        if (res.success) loadDashboard();
-        else alert(res.message);
+        if (res.success) {
+            return loadDashboard();
+        }
+        alert(res.message || "Failed to mark as sold.");
     };
 
     clearAllBtn?.addEventListener('click', async () => {
@@ -229,8 +231,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     window.confirmDelete = async (id) => {
         if (!confirm("This will permanently remove this ad from TUM Market. Continue?")) return;
-        const res = await requestJson(`/api/listings/${id}`, { method: 'DELETE' });
-        if (res.success) loadDashboard();
+        const res = await requestJson(`/api/listings/${id}`, { 
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' } 
+        });
+        if (res.success) return loadDashboard();
+        alert(res.message || "Failed to delete the listing.");
     };
 
     // Profile Picture Logic

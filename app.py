@@ -3,12 +3,16 @@ from flask_sqlalchemy import SQLAlchemy
 import os
 import re
 import json
+from dotenv import load_dotenv
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import cloudinary
 import cloudinary.uploader
 from datetime import datetime, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__)
 app.url_map.strict_slashes = False  # Best practice: Treat /api/route and /api/route/ the same
@@ -50,11 +54,11 @@ def ratelimit_handler(e):
     }), 429
 
 # Database Configuration
-db_url = os.environ.get('DATABASE_URL', 'sqlite:///tum_market.db')
-if db_url.startswith("postgres://"):
+db_url = os.environ.get('DATABASE_URL')
+if db_url and db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url or 'sqlite:///tum_market.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -79,7 +83,8 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
     profile_picture = db.Column(db.Text, nullable=True)
-    listings = db.relationship('Listing', backref='author', lazy=True)
+    listings = db.relationship('Listing', backref='author', lazy=True, cascade="all, delete-orphan")
+    notifications = db.relationship('Notification', backref='recipient', lazy=True, cascade="all, delete-orphan")
 
 class Listing(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -90,14 +95,14 @@ class Listing(db.Model):
     image = db.Column(db.Text, nullable=True)
     seller_phone = db.Column(db.String(20), nullable=False)
     posted_by = db.Column(db.String(100), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True) # Optimized user profile
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False, index=True) # Optimized user profile
     status = db.Column(db.String(20), default='available', index=True)
     tier = db.Column(db.String(20), default='free', index=True)
     date_posted = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
 
 class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=True, index=True)
     type = db.Column(db.String(50))
     title = db.Column(db.String(100))
     message = db.Column(db.Text)
@@ -106,6 +111,7 @@ class Notification(db.Model):
 
 with app.app_context():
     db.create_all()
+    print("🚀 Database connected and tables verified.")
 
 @app.route('/')
 def index():
@@ -347,7 +353,7 @@ def clear_user_listings():
         return jsonify({"success": False, "message": "Unauthorized"}), 401
     
     # Efficiently delete all listings belonging to the session user
-    db.session.query(Listing).filter_by(user_id=session['user_id']).delete()
+    db.session.query(Listing).filter_by(user_id=session['user_id']).delete(synchronize_session=False)
     db.session.commit()
     return jsonify({"success": True, "message": "All your listings have been removed."})
 
@@ -393,40 +399,34 @@ def mark_notification_read(noti_id):
     db.session.commit()
     return jsonify({"success": True})
 
+@app.route('/api/notifications/<int:noti_id>', methods=['DELETE'])
+def delete_single_notification(noti_id):
+    if 'user_id' not in session:
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
+    
+    notification = db.session.get(Notification, noti_id)
+    if not notification:
+        return jsonify({"success": False, "message": "Notification not found"}), 404
+    
+    if notification.user_id and notification.user_id != session['user_id']:
+        return jsonify({"success": False, "message": "Permission denied."}), 403
+    
+    db.session.delete(notification)
+    db.session.commit()
+    return jsonify({"success": True, "message": "Notification deleted."})
+
 @app.route('/api/notifications/clear', methods=['DELETE'])
 def clear_notifications():
     if 'user_id' not in session:
         return jsonify({"success": False, "message": "Unauthorized"}), 401
     
     user_id = session['user_id']
-    # Instead of deleting, we mark all as read to keep a record, or delete user-specific ones
-    stmt = db.update(Notification).where(
+    # Hard delete notifications to truly clear the database of old entries
+    db.session.query(Notification).filter(
         (Notification.user_id == None) | (Notification.user_id == user_id)
-    ).values(is_read=True)
-    
-    db.session.execute(stmt)
+    ).delete(synchronize_session=False)
     db.session.commit()
     return jsonify({"success": True, "message": "All notifications cleared."})
-
-@app.route('/api/reset_data', methods=['POST'])
-def reset_data():
-    # Security: Only allow reset if a secret key matches
-    # Set ADMIN_RESET_KEY in your Render environment variables
-    admin_key = request.headers.get('X-Admin-Key')
-    if admin_key != os.environ.get('ADMIN_RESET_KEY', 'lowkey@odis.tumstandard'):
-        return jsonify({"success": False, "message": "Unauthorized"}), 403
-
-    try:
-        db.session.query(Notification).delete()
-        db.session.query(Listing).delete()
-        db.session.query(User).delete()
-        db.session.commit()
-        return jsonify({"success": True, "message": "User and listing data has been reset successfully."})
-    except Exception as e:
-        db.session.rollback()
-        app.logger.error(f"Reset Data Error: {str(e)}")
-        return jsonify({"success": False, "message": f"Database reset failed: {str(e)}"}), 500
-
 
 @app.route('/<path:filename>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
 def serve_static(filename):

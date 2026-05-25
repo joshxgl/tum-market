@@ -233,12 +233,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function markNotiRead(id) {
         const res = await requestJson(`/api/notifications/${id}/read`, { method: 'POST' });
-        if (res.success) loadNotifications();
+        if (res.success) return loadNotifications();
+        alert(res.message || "Failed to mark notification as read.");
     }
 
     document.getElementById('clearNotisBtn')?.addEventListener('click', async () => {
         const res = await requestJson('/api/notifications/clear', { method: 'DELETE' });
-        if (res.success) loadNotifications();
+        if (res.success) return loadNotifications();
+        alert(res.message || "Failed to clear notifications.");
     });
 
     // --- Event Listeners ---
