@@ -1,14 +1,13 @@
 document.addEventListener("DOMContentLoaded", () => {
-
-    // --- DOM Elements ---
     const listingsContainer = document.getElementById("listingsContainer");
     const searchForm = document.querySelector(".search-bar");
-    const searchInput = searchForm.querySelector('input[type="text"]');
-    const searchCategorySelect = searchForm.querySelector('select');
+    const searchInput = searchForm?.querySelector('input[type="text"]');
+    const searchCategorySelect = searchForm?.querySelector('select');
     const categoryCards = document.querySelectorAll(".category-card");
     const navLinks = document.querySelectorAll('.nav-link');
 
     const postAdBtn = document.querySelector(".btn-post");
+    const loginBtn = document.querySelector(".btn-login");
     const adModal = document.getElementById("adModal");
     const closeModalBtn = document.getElementById("closeModalBtn");
     const postAdForm = document.getElementById("postAdForm");
@@ -16,7 +15,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const imagePreviewContainer = document.getElementById("imagePreviewContainer");
     const imagePreview = document.getElementById("imagePreview");
 
-    const loginBtn = document.querySelector(".btn-login");
     const authModal = document.getElementById("authModal");
     const closeAuthBtn = document.getElementById("closeAuthBtn");
     const authForm = document.getElementById("authForm");
@@ -29,9 +27,29 @@ document.addEventListener("DOMContentLoaded", () => {
     const notificationDropdown = document.getElementById("notificationDropdown");
     const notificationList = document.getElementById("notificationList");
     const notificationBadge = document.getElementById("notiBadge");
+    if (notificationDropdown && notificationDropdown.parentElement !== document.body) {
+        document.body.appendChild(notificationDropdown);
+    }
+    const profileDropdown = document.getElementById("profileDropdown");
 
     const detailsModal = document.getElementById("detailsModal");
     const detailsModalBody = document.getElementById("detailsModalBody");
+
+    const assistantWidget = document.getElementById('assistantWidget');
+    const assistantToggle = document.getElementById('assistantToggle');
+    const assistantPanel = document.getElementById('assistantPanel');
+    const assistantClose = document.getElementById('assistantClose');
+    const assistantForm = document.getElementById('assistantForm');
+    const assistantInput = document.getElementById('assistantInput');
+    const assistantMessages = document.getElementById('assistantMessages');
+    const assistantWelcome = document.getElementById('assistantWelcome');
+
+    const ASSISTANT_STARTUP_TEXT =
+        'Welcome to TUM Market! I can help you search listings, post ads, sign in, check notifications, and contact sellers.';
+
+    if (assistantWelcome) {
+        assistantWelcome.textContent = ASSISTANT_STARTUP_TEXT;
+    }
 
     let currentUploadedImageBase64 = "https://via.placeholder.com/300x180";
     let isLoginMode = true;
@@ -39,174 +57,108 @@ document.addEventListener("DOMContentLoaded", () => {
     let currentNotifications = [];
     let notificationsLoaded = false;
 
+    function syncNavbarHeight() {
+        const navbar = document.querySelector('.navbar');
+        if (navbar) {
+            document.documentElement.style.setProperty('--navbar-height', `${navbar.offsetHeight + 10}px`);
+        }
+    }
+
+    function isLoggedIn() {
+        return Boolean(localStorage.getItem("tum_market_user") && localStorage.getItem("tum_market_user_id"));
+    }
+
     function openModal(modal) {
-        modal.classList.add("active");
-        closeAssistantPanel();
+        modal?.classList.add("active");
+        setAssistantOpen(false);
     }
 
     function closeModal(modal) {
-        modal.classList.remove("active");
+        modal?.classList.remove("active");
     }
 
-    const assistantHistory = JSON.parse(localStorage.getItem('assistant_history') || '{}');
-
-    function checkExistingSession() {
-        const savedUserName = localStorage.getItem("tum_market_user");
-        const savedUserId = localStorage.getItem("tum_market_user_id");
-        if (savedUserName && savedUserId) {
-            applyAuthenticatedUI(savedUserName, savedUserId);
-        }
-    }
-
-    function deriveAssistantTopic(message) {
-        const normalized = message.trim().toLowerCase();
-        if (!normalized) return 'empty';
-        if (/post|ad|listing/.test(normalized)) return 'posting';
-        if (/login|sign|account/.test(normalized)) return 'auth';
-        if (/search|find|buy|browse/.test(normalized)) return 'search';
-        if (/notification|notify|alert/.test(normalized)) return 'notifications';
-        if (/profile|picture|avatar|image/.test(normalized)) return 'profile';
-        return 'general';
-    }
-
-    function saveAssistantHistory(topic) {
-        assistantHistory[topic] = (assistantHistory[topic] || 0) + 1;
-        localStorage.setItem('assistant_history', JSON.stringify(assistantHistory));
-    }
-
-    function getAssistantReply(message, topic) {
-        const normalized = message.trim().toLowerCase();
-        const usageCount = assistantHistory[topic] || 0;
-        if (!normalized) {
-            return "Please type a question and I will do my best to help.";
-        }
-        if (usageCount > 2) {
-            return `I’ve seen questions like this ${usageCount + 1} times. For ${topic}, here’s the fastest help: ${getAssistantReply(message, 'help')}`;
-        }
-        if (topic === 'posting') {
-            return "To post a listing, click Post Ad, fill in the item details, and submit. You need to be logged in first.";
-        }
-        if (topic === 'auth') {
-            return "Use the Login button in the top bar to sign in or sign up. After login, your profile picture appears in the upper-right corner.";
-        }
-        if (topic === 'search') {
-            return "Search on the page or use the category cards to find items. Click View for item details and to contact the seller.";
-        }
-        if (topic === 'notifications') {
-            return "Click the bell icon to view notifications. You can mark items as read once you've checked them.";
-        }
-        if (topic === 'profile') {
-            return "Your profile page lets you upload a picture. Once saved, it will show in the header instead of initials.";
-        }
-        return "I can help with posting ads, logging in, searching items, and contacting sellers. What would you like to do?";
-    }
-
-    function appendAssistantMessage(text, sender = 'bot') {
-        const messageEl = document.createElement('div');
-        messageEl.className = `assistant-message ${sender}`;
-        messageEl.textContent = text;
-        assistantMessages.appendChild(messageEl);
-        assistantMessages.scrollTop = assistantMessages.scrollHeight;
-    }
-
-    function toggleAssistantPanel() {
-        const isActive = assistantPanel.classList.toggle('active');
-        assistantPanel.setAttribute('aria-hidden', String(!isActive));
-        if (isActive) {
-            assistantInput.focus();
-        }
-    }
-
-    function closeAssistantPanel() {
-        assistantPanel.classList.remove('active');
-        assistantPanel.setAttribute('aria-hidden', 'true');
-    }
-
-    // ---- AI Assistant References ----
-    const assistantToggle = document.getElementById('assistantToggle');
-    const assistantPanel = document.getElementById('assistantPanel');
-    const assistantClose = document.getElementById('assistantClose');
-    const assistantForm = document.getElementById('assistantForm');
-    const assistantInput = document.getElementById('assistantInput');
-    const assistantMessages = document.getElementById('assistantMessages');
-
-    assistantToggle.addEventListener('click', (e) => {
-        e.preventDefault();
-        toggleAssistantPanel();
-    });
-
-    assistantClose.addEventListener('click', () => closeAssistantPanel());
-
-    assistantForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const userText = assistantInput.value.trim();
-        if (!userText) {
-            return;
-        }
-        appendAssistantMessage(userText, 'user');
-        assistantInput.value = '';
-        setTimeout(() => {
-            appendAssistantMessage(getAssistantReply(userText), 'bot');
-        }, 250);
-    });
-
-    document.addEventListener('click', (event) => {
-        if (!assistantPanel.contains(event.target) && !assistantToggle.contains(event.target)) {
-            closeAssistantPanel();
-        }
-    });
-
-    function getProfilePhoto(userId) {
+    function getProfilePicture(userId) {
         return localStorage.getItem(`profile_picture_${userId}`) || null;
     }
 
+    function saveProfilePicture(userId, imageData) {
+        if (!userId || !imageData) return;
+        localStorage.setItem(`profile_picture_${userId}`, imageData);
+    }
+
+    function persistUser(data) {
+        localStorage.setItem('tum_market_user', data.name);
+        localStorage.setItem('tum_market_user_email', data.email || '');
+        localStorage.setItem('tum_market_user_id', String(data.id));
+        if (data.profile_picture) {
+            saveProfilePicture(data.id, data.profile_picture);
+        }
+        applyAuthenticatedUI(data.name, data.id);
+    }
+
+    async function requestJson(url, options = {}) {
+        const res = await fetch(url, options);
+        let data = {};
+        try {
+            data = await res.json();
+        } catch (_) {
+            data = { success: false, message: `Server error (${res.status}).` };
+        }
+        if (!res.ok && data.success !== true) {
+            return { success: false, message: data.message || `Request failed (${res.status}).` };
+        }
+        return data;
+    }
+
+    function checkExistingSession() {
+        requestJson('/api/user/session')
+            .then(data => {
+                if (data.logged_in) {
+                    persistUser(data);
+                }
+            })
+            .catch(() => {
+                const name = localStorage.getItem("tum_market_user");
+                const id = localStorage.getItem("tum_market_user_id");
+                if (name && id) applyAuthenticatedUI(name, id);
+            });
+    }
+
     function applyAuthenticatedUI(name, userId) {
-        const profilePic = getProfilePhoto(userId);
+        if (!loginBtn) return;
+        const id = userId || localStorage.getItem('tum_market_user_id');
+        const profilePic = id ? getProfilePicture(id) : null;
         if (profilePic) {
             loginBtn.innerHTML = `<img src="${profilePic}" alt="Profile" class="profile-avatar-nav">`;
         } else {
             const parts = (name || '').trim().split(/\s+/).filter(Boolean);
-            const initials = parts.length === 0 ? 'U' : (parts.length === 1 ? parts[0][0] : (parts[0][0] + parts[parts.length-1][0]));
-            const badge = (initials || 'U').toUpperCase();
-            loginBtn.innerHTML = `<span class="profile-circle">${badge}</span>`;
+            const initials = parts.length === 0 ? 'U' : (parts.length === 1 ? parts[0][0] : (parts[0][0] + parts[parts.length - 1][0]));
+            loginBtn.innerHTML = `<span class="profile-circle">${initials.toUpperCase()}</span>`;
         }
-        loginBtn.setAttribute('title', 'Go to profile');
         loginBtn.classList.add('has-profile');
-        loginBtn.id = "profileIcon";
+        loginBtn.setAttribute('title', 'Account menu');
+        syncNavbarHeight();
     }
 
-    function handleLogout() {
-        localStorage.removeItem("tum_market_user");
-        localStorage.removeItem("tum_market_user_email");
-        localStorage.removeItem("tum_market_user_id");
-        loginBtn.innerHTML = "Login";
-        loginBtn.removeAttribute('title');
-        loginBtn.classList.remove('has-profile');
-        loginBtn.id = "";
-        alert("Logged out");
-        location.reload();
-    }
-
-    function setActiveCategory(category) {
-        categoryCards.forEach(card => {
-            card.classList.toggle('active', card.dataset.category === category);
-        });
+    function toggleProfileDropdown() {
+        profileDropdown?.classList.toggle("active");
     }
 
     function displayListings(items) {
+        if (!listingsContainer) return;
         listingsContainer.innerHTML = "";
-        if (!items.length) {
+        const activeItems = items.filter(i => i.status !== 'sold');
+
+        if (!activeItems.length) {
             listingsContainer.innerHTML = `<div class="empty-state"><h2>No items found.</h2><p>Try a different search or category.</p></div>`;
             return;
         }
 
-        items.forEach(item => {
+        activeItems.forEach(item => {
             const card = document.createElement("div");
             card.classList.add("listing-card");
             card.innerHTML = `
-                <div class="card-image">
-                    <img src="${item.image}" alt="${item.title}">
-                </div>
+                <div class="card-image"><img src="${item.image}" alt="${item.title}"></div>
                 <div class="card-info">
                     <span class="price">Ksh ${item.price}</span>
                     <h4>${item.title}</h4>
@@ -218,20 +170,49 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    function getListingById(id) {
-        return globalListings.find(item => item.id === id);
+    function filterListings(searchText, category) {
+        const query = (searchText || '').trim().toLowerCase();
+        const selectedCategory = category || 'all';
+        const filtered = globalListings.filter(item => {
+            const matchesSearch = !query ||
+                String(item.title || '').toLowerCase().includes(query) ||
+                String(item.location || '').toLowerCase().includes(query);
+            const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
+            return matchesSearch && matchesCategory;
+        });
+        displayListings(filtered);
     }
 
-    function viewDetails(id) {
-        const item = getListingById(id);
-        if (!item) return;
-        // prepare WhatsApp link (basic normalization for common local formats)
-        const rawPhone = String(item.seller_phone || '').trim();
-        let waNumber = rawPhone.replace(/[^0-9+]/g, '');
-        if (waNumber.startsWith('+')) waNumber = waNumber.slice(1);
-        if (waNumber.startsWith('0')) waNumber = '254' + waNumber.slice(1); // assume Kenya if local 0-prefix
-        const waMessage = encodeURIComponent(`Hi, is the "${item.title}" still available? I'm interested.`);
-        const waHref = `https://wa.me/${waNumber}?text=${waMessage}`;
+    function setActiveCategory(category) {
+        categoryCards.forEach(card => {
+            card.classList.toggle('active', card.dataset.category === category);
+        });
+    }
+
+    function fetchLiveListings() {
+        fetch('/api/listings')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && Array.isArray(data.listings)) {
+                    globalListings = data.listings;
+                    displayListings(globalListings);
+                } else {
+                    throw new Error('bad response');
+                }
+            })
+            .catch(() => {
+                listingsContainer.innerHTML = `<div class="empty-state"><h2>Unable to load listings.</h2><p>Please refresh the page.</p></div>`;
+            });
+    }
+
+    window.viewDetails = function(id) {
+        const item = globalListings.find(i => i.id === id);
+        if (!item || !detailsModalBody) return;
+
+        let phone = String(item.seller_phone || '').replace(/[^0-9+]/g, '');
+        if (phone.startsWith('+')) phone = phone.slice(1);
+        if (phone.startsWith('0')) phone = '254' + phone.slice(1);
+        const waMessage = encodeURIComponent(`Hi, is the "${item.title}" still available?`);
 
         detailsModalBody.innerHTML = `
             <div class="details-card">
@@ -240,33 +221,72 @@ document.addEventListener("DOMContentLoaded", () => {
                     <h2>${item.title}</h2>
                     <p class="details-price"><strong>Price:</strong> Ksh ${item.price}</p>
                     <p><strong>Location:</strong> ${item.location}</p>
-                    <p><strong>Category:</strong> ${item.category}</p>
+                    <p><strong>Category:</strong> ${item.category || '—'}</p>
                     <p><strong>Seller:</strong> ${item.posted_by}</p>
-                    <p><strong>Phone:</strong> ${item.seller_phone}</p>
-                    <div class="details-actions">
-                        <a class="whatsapp-btn" href="${waHref}" target="_blank" rel="noopener">💬 Message seller on WhatsApp</a>
-                    </div>
+                    <a class="whatsapp-btn" href="https://wa.me/${phone}?text=${waMessage}" target="_blank" rel="noopener">💬 Message seller on WhatsApp</a>
                 </div>
             </div>
         `;
         openModal(detailsModal);
-    }
-
-    window.viewDetails = viewDetails;
+    };
 
     function updateNotificationBadge(count) {
         if (!notificationBadge) return;
-        notificationBadge.textContent = count;
-        notificationBadge.style.display = count > 0 ? 'flex' : 'none';
+        notificationBadge.textContent = String(count);
+        if (count > 0) {
+            notificationBadge.hidden = false;
+            notificationBadge.style.display = 'flex';
+        } else {
+            notificationBadge.hidden = true;
+            notificationBadge.style.display = 'none';
+        }
     }
 
+    function positionNotificationDropdown() {
+        if (!notificationBtn || !notificationDropdown) return;
+        const rect = notificationBtn.getBoundingClientRect();
+        const gap = 8;
+        const panelWidth = Math.min(340, window.innerWidth - 24);
+        const top = rect.bottom + gap;
+        const maxHeight = Math.max(160, window.innerHeight - top - 12);
+
+        let left = rect.right - panelWidth;
+        left = Math.max(12, Math.min(left, window.innerWidth - panelWidth - 12));
+
+        notificationDropdown.style.width = `${panelWidth}px`;
+        notificationDropdown.style.left = `${left}px`;
+        notificationDropdown.style.right = 'auto';
+        notificationDropdown.style.top = `${top}px`;
+        notificationDropdown.style.maxHeight = `${maxHeight}px`;
+    }
+
+    function setNotificationsOpen(open) {
+        if (!notificationDropdown) return;
+        notificationDropdown.classList.toggle('active', open);
+        notificationBtn?.setAttribute('aria-expanded', String(open));
+        notificationDropdown.setAttribute('aria-hidden', String(!open));
+        if (open) {
+            positionNotificationDropdown();
+            requestAnimationFrame(positionNotificationDropdown);
+        }
+    }
+
+    function onNotificationReposition() {
+        if (notificationDropdown?.classList.contains('active')) {
+            positionNotificationDropdown();
+        }
+    }
+
+    window.addEventListener('resize', onNotificationReposition);
+    window.addEventListener('scroll', onNotificationReposition, true);
+
     function renderNotifications() {
-        if (!Array.isArray(currentNotifications) || !currentNotifications.length) {
+        if (!notificationList) return;
+        if (!currentNotifications.length) {
             notificationList.innerHTML = `<div class="noti-item">No notifications available.</div>`;
             updateNotificationBadge(0);
             return;
         }
-
         notificationList.innerHTML = currentNotifications.map((item, index) => `
             <div class="noti-item" data-notification-index="${index}">
                 <div class="noti-text">
@@ -277,179 +297,278 @@ document.addEventListener("DOMContentLoaded", () => {
                 <button type="button" class="mark-read-btn" data-index="${index}">Mark as read</button>
             </div>
         `).join('');
-
         updateNotificationBadge(currentNotifications.length);
     }
 
-    function markNotificationRead(index) {
-        if (typeof index !== 'number' || index < 0 || index >= currentNotifications.length) return;
-        currentNotifications.splice(index, 1);
-        renderNotifications();
-    }
-
-    function toggleNotifications() {
-        notificationDropdown.classList.toggle('active');
-        if (notificationDropdown.classList.contains('active')) {
-            if (notificationsLoaded) {
-                renderNotifications();
-            } else {
-                loadNotifications();
-            }
-        }
-    }
-
-    window.toggleNotifications = toggleNotifications;
-    window.loadNotifications = loadNotifications;
-    window.renderNotifications = renderNotifications;
-    window.markNotificationRead = markNotificationRead;
-
-    // Profile dropdown handling
-    let profileDropdownEl = null;
-
-    function createProfileDropdown() {
-        if (profileDropdownEl) return;
-        profileDropdownEl = document.createElement('div');
-        profileDropdownEl.id = 'profileDropdown';
-        profileDropdownEl.className = 'profile-dropdown';
-        profileDropdownEl.innerHTML = `
-            <a href="/profile" class="profile-dd-item">Profile</a>
-            <button type="button" class="profile-dd-item" id="profileDdLogout">Logout</button>
-        `;
-        // Append to nav so positioning is relative to nav-links
-        const nav = loginBtn.parentElement || document.body;
-        nav.appendChild(profileDropdownEl);
-
-        document.getElementById('profileDdLogout').addEventListener('click', (ev) => {
-            ev.preventDefault();
-            handleLogout();
-        });
-    }
-
-    function toggleProfileDropdown() {
-        createProfileDropdown();
-        profileDropdownEl.classList.toggle('active');
-    }
-
-    function closeProfileDropdown() {
-        if (profileDropdownEl) profileDropdownEl.classList.remove('active');
-    }
-
-    // Close dropdowns when clicking outside
-    document.addEventListener('click', (e) => {
-        const target = e.target;
-        if (profileDropdownEl && !profileDropdownEl.contains(target) && !loginBtn.contains(target)) {
-            closeProfileDropdown();
-        }
-        if (notificationDropdown && !notificationDropdown.contains(target) && !notificationBtn.contains(target)) {
-            notificationDropdown.classList.remove('active');
-        }
-    });
-
     function loadNotifications() {
-        fetch('/api/notifications')
-            .then(r => r.json())
+        return fetch('/api/notifications')
+            .then(r => {
+                if (!r.ok) throw new Error('http');
+                return r.json();
+            })
             .then(data => {
                 notificationsLoaded = true;
-                if (!Array.isArray(data)) {
-                    currentNotifications = [];
-                    notificationList.innerHTML = `<div class="noti-item">No notifications available.</div>`;
-                    updateNotificationBadge(0);
-                    return;
-                }
-                currentNotifications = data;
+                currentNotifications = Array.isArray(data) ? [...data] : [];
                 renderNotifications();
+                onNotificationReposition();
             })
             .catch(() => {
                 notificationsLoaded = true;
                 currentNotifications = [];
-                updateNotificationBadge(0);
-                notificationList.innerHTML = `<div class="noti-item">Unable to load notifications.</div>`;
-            });
-    }
-
-    notificationList.addEventListener('click', (event) => {
-        const button = event.target.closest('.mark-read-btn');
-        if (!button) return;
-        const index = Number(button.dataset.index);
-        markNotificationRead(index);
-    });
-
-    function filterListings(searchText, category) {
-        const query = (searchText || '').trim().toLowerCase();
-        const selectedCategory = category || 'all';
-        const filtered = globalListings.filter(item => {
-            const matchesSearch = !query || item.title.toLowerCase().includes(query) || item.location.toLowerCase().includes(query);
-            const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
-            return matchesSearch && matchesCategory;
-        });
-        displayListings(filtered);
-    }
-
-    function resetAdForm() {
-        postAdForm.reset();
-        currentUploadedImageBase64 = "https://via.placeholder.com/300x180";
-        imagePreviewContainer.style.display = 'none';
-        imagePreview.src = '';
-    }
-
-    function fetchLiveListings() {
-        fetch('/api/listings')
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    globalListings = data.listings;
-                    displayListings(globalListings);
+                if (notificationList) {
+                    notificationList.innerHTML = `<div class="noti-item">Unable to load notifications.</div>`;
                 }
-            })
-            .catch(() => {
-                listingsContainer.innerHTML = `<div class="empty-state"><h2>Unable to load listings.</h2><p>Please refresh the page.</p></div>`;
+                updateNotificationBadge(0);
             });
     }
 
-    fetchLiveListings();
-    loadNotifications();
-    checkExistingSession();
+    function toggleNotifications() {
+        const willOpen = !notificationDropdown?.classList.contains('active');
+        setNotificationsOpen(willOpen);
+        if (!willOpen) return;
+        if (!notificationsLoaded) {
+            loadNotifications().then(onNotificationReposition);
+        } else {
+            renderNotifications();
+            onNotificationReposition();
+        }
+    }
 
-    loginBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        const savedUser = localStorage.getItem("tum_market_user");
-        const savedUserId = localStorage.getItem("tum_market_user_id");
-        if (savedUser && savedUserId) {
-            // if logged in, toggle the profile dropdown instead of redirecting immediately
-            toggleProfileDropdown();
+    const assistantResizeHandle = document.getElementById('assistantResizeHandle');
+
+    function getAssistantHeightLimits() {
+        return { min: 140, max: Math.min(Math.floor(window.innerHeight * 0.72), 440) };
+    }
+
+    function setAssistantPanelHeight(px) {
+        if (!assistantPanel) return;
+        const { min, max } = getAssistantHeightLimits();
+        const height = Math.max(min, Math.min(max, Math.round(px)));
+        assistantPanel.style.height = `${height}px`;
+        assistantPanel.style.maxHeight = `${height}px`;
+        localStorage.setItem('assistant_panel_custom_height', String(height));
+    }
+
+    function clearAssistantCustomHeight() {
+        if (!assistantPanel) return;
+        localStorage.removeItem('assistant_panel_custom_height');
+        assistantPanel.style.height = '';
+        assistantPanel.style.maxHeight = '';
+    }
+
+    function restoreAssistantCustomHeight() {
+        const saved = Number(localStorage.getItem('assistant_panel_custom_height'));
+        if (saved > 0) setAssistantPanelHeight(saved);
+    }
+
+    function applyAssistantSize(sizeKey) {
+        if (!assistantPanel) return;
+        const allowed = ['sm', 'md', 'lg'];
+        const size = allowed.includes(sizeKey) ? sizeKey : 'md';
+        assistantPanel.classList.remove('assistant-panel--sm', 'assistant-panel--md', 'assistant-panel--lg');
+        assistantPanel.classList.add(`assistant-panel--${size}`);
+        document.querySelectorAll('.assistant-size-btn').forEach(btn => {
+            btn.classList.toggle('is-active', btn.dataset.assistantSize === size);
+        });
+        localStorage.setItem('assistant_panel_size', size);
+        clearAssistantCustomHeight();
+        syncAssistantLayout();
+    }
+
+    function initAssistantSize() {
+        const saved = localStorage.getItem('assistant_panel_size');
+        const isMobile = window.matchMedia('(max-width: 768px)').matches;
+        const defaultSize = isMobile ? 'sm' : 'md';
+        applyAssistantSize(saved || defaultSize);
+        restoreAssistantCustomHeight();
+    }
+
+    function initAssistantResize() {
+        if (!assistantResizeHandle || !assistantPanel) return;
+
+        let startY = 0;
+        let startH = 0;
+
+        const stopDrag = () => {
+            assistantResizeHandle.classList.remove('is-dragging');
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', stopDrag);
+            document.removeEventListener('touchmove', onMove);
+            document.removeEventListener('touchend', stopDrag);
+        };
+
+        const onMove = (e) => {
+            e.preventDefault();
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            setAssistantPanelHeight(startH + (startY - clientY));
+        };
+
+        const startDrag = (e) => {
+            if (!assistantPanel.classList.contains('active')) return;
+            e.preventDefault();
+            e.stopPropagation();
+            startY = e.touches ? e.touches[0].clientY : e.clientY;
+            startH = assistantPanel.offsetHeight;
+            assistantResizeHandle.classList.add('is-dragging');
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', stopDrag);
+            document.addEventListener('touchmove', onMove, { passive: false });
+            document.addEventListener('touchend', stopDrag);
+        };
+
+        assistantResizeHandle.addEventListener('mousedown', startDrag);
+        assistantResizeHandle.addEventListener('touchstart', startDrag, { passive: false });
+    }
+
+    function syncAssistantLayout() {
+        if (!assistantWidget || !assistantToggle) return;
+        const size = assistantToggle.offsetHeight;
+        assistantWidget.style.setProperty('--assistant-size', `${size}px`);
+
+        if (!assistantPanel || window.matchMedia('(min-width: 769px)').matches) {
+            assistantWidget.style.removeProperty('--assistant-panel-bottom');
             return;
         }
-        authModal.classList.add("active");
+
+        const rect = assistantToggle.getBoundingClientRect();
+        const gap = 12;
+        const bottomPx = Math.max(12, window.innerHeight - rect.top + gap);
+        assistantWidget.style.setProperty('--assistant-panel-bottom', `${bottomPx}px`);
+    }
+
+    function getAssistantReply(message) {
+        const text = message.trim().toLowerCase();
+        if (/post|ad|listing|sell/.test(text)) {
+            return 'Tap Post Ad, fill in your item details, and submit. You must be logged in first.';
+        }
+        if (/login|sign|account|register/.test(text)) {
+            return 'Use Login in the top bar to sign in or create an account.';
+        }
+        if (/search|find|buy|browse|category/.test(text)) {
+            return 'Use the search bar or category chips to find items, then tap View for details.';
+        }
+        if (/notif|bell|alert/.test(text)) {
+            return 'Tap the bell icon to read updates. Mark items as read when you are done.';
+        }
+        if (/profile|dashboard|my ad/.test(text)) {
+            return 'Open My Dashboard from your profile menu to manage your listings.';
+        }
+        return 'Ask about searching, posting ads, logging in, notifications, or your dashboard.';
+    }
+
+    function appendAssistantMessage(text, sender = 'bot') {
+        if (!assistantMessages) return;
+        const messageEl = document.createElement('div');
+        messageEl.className = `assistant-message ${sender}`;
+        messageEl.textContent = text;
+        assistantMessages.appendChild(messageEl);
+        assistantMessages.scrollTop = assistantMessages.scrollHeight;
+    }
+
+    function setAssistantOpen(open) {
+        if (!assistantPanel) return;
+        assistantPanel.classList.toggle('active', open);
+        assistantPanel.setAttribute('aria-hidden', String(!open));
+        if (open) {
+            syncAssistantLayout();
+            requestAnimationFrame(syncAssistantLayout);
+            assistantInput?.focus();
+        }
+    }
+
+    assistantToggle?.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const willOpen = !assistantPanel?.classList.contains('active');
+        setAssistantOpen(willOpen);
     });
 
-    postAdBtn.addEventListener("click", (e) => {
+    assistantClose?.addEventListener('click', () => setAssistantOpen(false));
+
+    assistantForm?.addEventListener('submit', (e) => {
         e.preventDefault();
-        const savedUser = localStorage.getItem("tum_market_user");
-        const savedUserId = localStorage.getItem("tum_market_user_id");
-        if (!savedUser || !savedUserId) {
-            authModal.classList.add("active");
+        const text = assistantInput?.value.trim();
+        if (!text) return;
+        appendAssistantMessage(text, 'user');
+        if (assistantInput) assistantInput.value = '';
+        setTimeout(() => appendAssistantMessage(getAssistantReply(text), 'bot'), 280);
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!assistantPanel?.classList.contains('active')) return;
+        const target = e.target;
+        const inside = target.closest?.('#assistantPanel, #assistantToggle, .assistant-widget');
+        if (!inside) setAssistantOpen(false);
+    });
+
+    document.querySelectorAll('.assistant-size-btn').forEach(btn => {
+        btn.addEventListener('click', () => applyAssistantSize(btn.dataset.assistantSize));
+    });
+
+    window.addEventListener('resize', () => {
+        syncAssistantLayout();
+        syncNavbarHeight();
+    });
+    window.addEventListener('scroll', syncAssistantLayout, true);
+    initAssistantSize();
+    initAssistantResize();
+
+    loginBtn?.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (isLoggedIn()) {
+            toggleProfileDropdown();
+        } else {
+            openModal(authModal);
+        }
+    });
+
+    document.getElementById("profileDdLogout")?.addEventListener("click", () => {
+        fetch('/api/logout', { method: 'POST' }).finally(() => {
+            localStorage.clear();
+            window.location.reload();
+        });
+    });
+
+    postAdBtn?.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (!isLoggedIn()) {
+            openModal(authModal);
             return;
         }
         openModal(adModal);
     });
 
-    closeModalBtn.addEventListener("click", () => closeModal(adModal));
-    closeAuthBtn.addEventListener("click", () => closeModal(authModal));
-    notificationBtn.addEventListener("click", (e) => {
+    closeModalBtn?.addEventListener("click", () => closeModal(adModal));
+    closeAuthBtn?.addEventListener("click", () => closeModal(authModal));
+    notificationBtn?.addEventListener("click", (e) => {
         e.preventDefault();
+        e.stopPropagation();
         toggleNotifications();
     });
 
-    searchForm.addEventListener("submit", (e) => {
+    notificationDropdown?.addEventListener('click', (e) => e.stopPropagation());
+
+    notificationList?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const button = event.target.closest('.mark-read-btn');
+        if (!button) return;
+        const index = Number(button.dataset.index);
+        if (index >= 0 && index < currentNotifications.length) {
+            currentNotifications.splice(index, 1);
+            renderNotifications();
+        }
+    });
+
+    searchForm?.addEventListener("submit", (e) => {
         e.preventDefault();
-        filterListings(searchInput.value, searchCategorySelect.value);
+        filterListings(searchInput?.value, searchCategorySelect?.value);
     });
 
     categoryCards.forEach(card => {
         card.addEventListener("click", () => {
             const selectedCategory = card.dataset.category;
             setActiveCategory(selectedCategory);
-            filterListings(searchInput.value, selectedCategory);
+            filterListings(searchInput?.value, selectedCategory);
         });
     });
 
@@ -458,106 +577,81 @@ document.addEventListener("DOMContentLoaded", () => {
             e.preventDefault();
             const selectedCategory = link.dataset.nav || 'all';
             setActiveCategory(selectedCategory);
-            filterListings(searchInput.value, selectedCategory);
+            filterListings(searchInput?.value, selectedCategory);
             navLinks.forEach(other => other.classList.remove('active'));
             link.classList.add('active');
         });
     });
 
-    toggleAuthMode.addEventListener("click", (e) => {
+    toggleAuthMode?.addEventListener("click", (e) => {
         e.preventDefault();
         isLoginMode = !isLoginMode;
         if (isLoginMode) {
-            authTitle.innerText = 'Login to TUM Market';
-            authSubmitBtn.innerText = 'Login';
+            authTitle.textContent = 'Login to TUM Market';
+            authSubmitBtn.textContent = 'Login';
             nameGroup.style.display = 'none';
-            toggleAuthMode.innerText = "Don't have an account? Sign up";
+            toggleAuthMode.textContent = "Don't have an account? Sign up";
         } else {
-            authTitle.innerText = 'Create an Account';
-            authSubmitBtn.innerText = 'Sign Up';
+            authTitle.textContent = 'Create an Account';
+            authSubmitBtn.textContent = 'Sign Up';
             nameGroup.style.display = 'block';
-            toggleAuthMode.innerText = 'Already have an account? Login';
+            toggleAuthMode.textContent = 'Already have an account? Login';
         }
     });
 
-    authForm.addEventListener('submit', (e) => {
-        e.preventDefault();
+    adImageInput?.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            currentUploadedImageBase64 = evt.target.result;
+            if (imagePreview) imagePreview.src = currentUploadedImageBase64;
+            if (imagePreviewContainer) imagePreviewContainer.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    });
 
-        const email = document.getElementById('authEmail').value.trim();
-        const password = document.getElementById('authPassword').value.trim();
-        const name = document.getElementById('authName').value.trim();
+    authForm?.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const email = document.getElementById("authEmail").value.trim();
+        const password = document.getElementById("authPassword").value.trim();
+        const name = document.getElementById("authName")?.value.trim() || "";
 
         if (!email || !password || (!isLoginMode && !name)) {
             alert('Please fill in all required fields.');
             return;
         }
 
-        const url = isLoginMode ? '/api/login' : '/api/signup';
+        const endpoint = isLoginMode ? '/api/login' : '/api/signup';
         const payload = isLoginMode ? { email, password } : { name, email, password };
 
-        fetch(url, {
+        requestJson(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         })
-        .then(r => r.json().then(data => ({ status: r.status, body: data })))
-        .then(({ status, body }) => {
-            if (body.success) {
-                const userName = body.name || name;
-                const userEmail = body.email || email;
-                const userId = body.id || localStorage.getItem('tum_market_user_id');
-                localStorage.setItem('tum_market_user', userName);
-                localStorage.setItem('tum_market_user_email', userEmail);
-                if (userId) {
-                    localStorage.setItem('tum_market_user_id', userId);
+            .then(data => {
+                if (data.success) {
+                    persistUser({
+                        name: data.name || name,
+                        email: data.email || email,
+                        id: data.id,
+                        profile_picture: data.profile_picture
+                    });
+                    alert(data.message);
+                    closeModal(authModal);
+                } else {
+                    alert(data.message || 'Unable to authenticate.');
                 }
-                applyAuthenticatedUI(userName, userId);
-                alert(body.message);
-                closeModal(authModal);
-                checkExistingSession();
-            } else {
-                alert(body.message || 'Unable to authenticate.');
-            }
-        })
-        .catch(() => {
-            alert('Unable to reach the server. Please try again later.');
-        });
+            })
+            .catch(() => alert('Could not reach the server. Make sure the app is running at http://127.0.0.1:5000'));
     });
 
-    adImageInput.addEventListener("change", (e) => {
-        const file = e.target.files[0];
-        if (!file) {
-            imagePreviewContainer.style.display = 'none';
-            return;
-        }
-        const reader = new FileReader();
-        reader.onload = function(evt) {
-            currentUploadedImageBase64 = evt.target.result;
-            imagePreview.src = currentUploadedImageBase64;
-            imagePreviewContainer.style.display = 'block';
-        };
-        reader.readAsDataURL(file);
-    });
-
-    postAdForm.addEventListener("submit", (e) => {
+    postAdForm?.addEventListener("submit", (e) => {
         e.preventDefault();
-        const title = document.getElementById("adTitle").value.trim();
-        const price = document.getElementById("adPrice").value.trim();
-        const location = document.getElementById("adLocation").value.trim();
-        const category = document.getElementById("adCategory").value;
-        const tier = document.getElementById("adTier").value;
-        const sellerPhone = document.getElementById("adPhone").value.trim() || "0700000000";
-        const userName = localStorage.getItem("tum_market_user");
-        const userId = localStorage.getItem("tum_market_user_id");
-
-        if (!userName || !userId) {
-            alert("Please login before posting an ad.");
-            authModal.classList.add("active");
-            return;
-        }
-
-        if (!title || !price || !location || !category) {
-            alert("Please fill in all required fields.");
+        if (!isLoggedIn()) {
+            alert('Please log in to post an ad.');
+            openModal(authModal);
             return;
         }
 
@@ -565,31 +659,50 @@ document.addEventListener("DOMContentLoaded", () => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                title,
-                price,
-                location,
-                category,
-                tier,
-                seller_phone: sellerPhone,
-                posted_by: userName,
-                user_id: Number(userId),
+                title: document.getElementById("adTitle").value,
+                price: document.getElementById("adPrice").value,
+                location: document.getElementById("adLocation").value,
+                category: document.getElementById("adCategory").value,
+                seller_phone: document.getElementById("adPhone").value,
                 image: currentUploadedImageBase64
             })
         })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                alert(data.message);
-                closeModal(adModal);
-                resetAdForm();
-                fetchLiveListings();
-            } else {
-                alert(data.message || 'Unable to post ad.');
-            }
-        })
-        .catch(() => {
-            alert('A network error occurred while posting the ad.');
-        });
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    closeModal(adModal);
+                    postAdForm.reset();
+                    currentUploadedImageBase64 = "https://via.placeholder.com/300x180";
+                    if (imagePreviewContainer) imagePreviewContainer.style.display = 'none';
+                    fetchLiveListings();
+                } else {
+                    alert(data.message || 'Could not post listing.');
+                }
+            })
+            .catch(() => alert('Network error. Please try again.'));
     });
 
+    document.addEventListener('click', (e) => {
+        const target = e.target;
+        if (profileDropdown && loginBtn &&
+            !profileDropdown.contains(target) && !loginBtn.contains(target)) {
+            profileDropdown.classList.remove('active');
+        }
+        const inNotifications = target.closest?.('#notificationWrap, #notificationBtn, #notificationDropdown');
+        if (notificationDropdown?.classList.contains('active') && !inNotifications) {
+            setNotificationsOpen(false);
+        }
+    });
+
+    const detailsCloseBtn = detailsModal?.querySelector('.close-btn');
+    detailsCloseBtn?.addEventListener('click', () => closeModal(detailsModal));
+
+    syncNavbarHeight();
+    window.addEventListener('resize', syncNavbarHeight);
+    window.addEventListener('load', syncNavbarHeight);
+
+    checkExistingSession();
+    fetchLiveListings();
+    loadNotifications();
 });

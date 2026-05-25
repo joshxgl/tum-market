@@ -5,50 +5,48 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TUM Market</title>
 
-    <!-- CSS FILE -->
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=8">
 </head>
 
 <body>
 
-    <!-- NAVBAR -->
     <header class="navbar">
-
-        <div class="logo">
-            <span class="brand">TUMMarket</span>
-            <small class="tagline">Buy, Sell &amp; Connect at TUM</small>
+        <div class="navbar-top">
+            <div class="logo">
+                <span class="brand">TUMMarket</span>
+                <small class="tagline">Buy, Sell &amp; Connect at TUM</small>
+            </div>
+            <div class="navbar-actions">
+                <a href="javascript:void(0)" class="btn-login">Login</a>
+                <a href="javascript:void(0)" class="btn-post">Post Ad</a>
+                <div class="notification-wrap" id="notificationWrap">
+                    <button type="button" id="notificationBtn" aria-label="Notifications" aria-expanded="false" aria-haspopup="true">
+                        🔔
+                        <span id="notiBadge" hidden>0</span>
+                    </button>
+                    <div class="notification-dropdown" id="notificationDropdown" role="menu" aria-hidden="true">
+                        <div id="notificationList">
+                            <div class="noti-item">Loading notifications...</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="profile-dropdown" id="profileDropdown">
+                    <a href="/profile" class="profile-dd-item">My Dashboard</a>
+                    <button type="button" class="profile-dd-item" id="profileDdLogout">Logout</button>
+                </div>
+            </div>
         </div>
-        <div id="auth-area"></div>
-
-        <nav class="nav-links">
+        <nav class="nav-links" aria-label="Categories">
             <a href="javascript:void(0)" class="nav-link active" data-nav="all">All</a>
             <a href="javascript:void(0)" class="nav-link" data-nav="electronics">Electronics</a>
             <a href="javascript:void(0)" class="nav-link" data-nav="hostels">Hostels</a>
             <a href="javascript:void(0)" class="nav-link" data-nav="fashion">Fashion</a>
-
-            <a href="javascript:void(0)" class="btn-login">Login</a>
-            <a href="javascript:void(0)" class="btn-post">Post Ad</a>
-
-            <a href="javascript:void(0)" id="notificationBtn">
-                🔔
-                <span id="notiBadge">3</span>
-            </a>
-
-            <div class="notification-dropdown" id="notificationDropdown">
-                <div id="notificationList">
-                    <div class="noti-item">
-                        Loading notifications...
-                    </div>
-                </div>
-            </div>
         </nav>
-
     </header>
 
-    <!-- SEARCH SECTION -->
     <section class="search-section">
 
-        <form class="search-bar">
+        <form class="search-bar" id="marketplaceSearchForm">
 
             <input type="text" placeholder="Search products...">
 
@@ -70,42 +68,37 @@
 
     </section>
 
-    <!-- CATEGORY CARDS -->
     <section class="categories">
 
-    <div class="category-card" data-category="electronics">
-        Electronics
-    </div>
+        <div class="category-card" data-category="electronics">
+            Electronics
+        </div>
 
-    <div class="category-card" data-category="hostels">
-        Hostels
-    </div>
+        <div class="category-card" data-category="hostels">
+            Hostels
+        </div>
 
-    <div class="category-card" data-category="fashion">
-        Fashion
-    </div>
+        <div class="category-card" data-category="fashion">
+            Fashion
+        </div>
 
-    <div class="category-card" data-category="bedrooms">
-        Bedrooms & Mattresses
-    </div>
+        <div class="category-card" data-category="bedrooms">
+            Bedrooms &amp; Mattresses
+        </div>
 
-    <div class="category-card" data-category="appliances">
-        Home Appliances
-    </div>
+        <div class="category-card" data-category="appliances">
+            Home Appliances
+        </div>
 
-    <div class="category-card" data-category="services">
-        Services
-    </div>
+        <div class="category-card" data-category="services">
+            Services
+        </div>
 
-</section>
-    <!-- MARKET LISTINGS -->
+    </section>
+
     <main id="listingsContainer">
+        </main>
 
-        <!-- JavaScript listings will appear here -->
-
-    </main>
-
-    <!-- POST AD MODAL -->
     <div class="modal" id="adModal">
 
         <div class="modal-content">
@@ -144,9 +137,7 @@
                 <input type="file" id="adImage" accept="image/*">
 
                 <div id="imagePreviewContainer" style="display:none;">
-
                     <img id="imagePreview" src="" alt="Preview">
-
                 </div>
 
                 <button type="submit">
@@ -159,7 +150,6 @@
 
     </div>
 
-    <!-- AUTH MODAL -->
     <div class="modal" id="authModal">
 
         <div class="modal-content">
@@ -175,9 +165,7 @@
             <form id="authForm">
 
                 <div id="nameGroup" style="display:none;">
-
                     <input type="text" id="authName" placeholder="Full Name">
-
                 </div>
 
                 <input type="email" id="authEmail" placeholder="Email Address" required>
@@ -200,25 +188,19 @@
 
     </div>
 
-    <!-- DETAILS MODAL -->
     <div class="modal" id="detailsModal">
 
         <div class="modal-content">
 
-            <span class="close-btn"
-                  onclick="document.getElementById('detailsModal').classList.remove('active')">
-                &times;
-            </span>
+            <span class="close-btn">&times;</span>
 
             <div id="detailsModalBody">
-
-            </div>
+                </div>
 
         </div>
 
     </div>
 
-    <!-- PAYMENT OVERLAY -->
     <div class="modal" id="paymentOverlay">
 
         <div class="modal-content">
@@ -231,26 +213,35 @@
 
     </div>
 
-    <!-- AI ASSISTANT WIDGET -->
     <div class="assistant-widget" id="assistantWidget">
         <button class="assistant-toggle" id="assistantToggle" aria-label="Open help chat">💬</button>
         <div class="assistant-panel" id="assistantPanel" aria-hidden="true">
             <div class="assistant-header">
-                <span>Help Assistant</span>
+                <span class="assistant-title">Help Assistant</span>
+                <div class="assistant-size-controls" aria-label="Chat size">
+                    <button type="button" class="assistant-size-btn" data-assistant-size="sm" title="Small chat">S</button>
+                    <button type="button" class="assistant-size-btn is-active" data-assistant-size="md" title="Medium chat">M</button>
+                    <button type="button" class="assistant-size-btn" data-assistant-size="lg" title="Large chat">L</button>
+                </div>
                 <button type="button" id="assistantClose" aria-label="Close chat">×</button>
             </div>
             <div class="assistant-messages" id="assistantMessages">
-                <div class="assistant-message bot">Hello! Need help searching, posting an ad, or managing your account?</div>
+                <div id="assistantWelcome" class="assistant-message bot assistant-message--static" role="status">
+                    Welcome to TUM Market! I can help you search listings, post ads, sign in, check notifications, and contact sellers.
+                </div>
             </div>
             <form class="assistant-form" id="assistantForm">
                 <input type="text" id="assistantInput" placeholder="Ask me anything..." autocomplete="off">
                 <button type="submit">Send</button>
             </form>
+            <div class="assistant-resize-handle" id="assistantResizeHandle" role="separator" aria-label="Resize chat height" title="Drag up or down to resize">
+                <span class="assistant-resize-bar"></span>
+                <span class="assistant-resize-label">Drag to resize</span>
+            </div>
         </div>
     </div>
 
-    <!-- JAVASCRIPT FILE -->
-    <script src="script.js"></script>
+    <script src="script.js?v=8"></script>
 
 </body>
 </html>
