@@ -1,6 +1,18 @@
 # Deployment Guide
 
-## Option 1: Render
+## Fastest: One-click Render deploy
+
+1. Open: **https://render.com/deploy?repo=https://github.com/joshxgl/tum-market**
+2. Sign in with GitHub and approve access.
+3. Render reads `render.yaml` automatically — click **Apply**.
+4. Wait for the build to finish (about 2–5 minutes).
+5. Your live URL will look like: `https://tum-market-xxxx.onrender.com`
+
+Share that URL with users. The full Flask app (login, listings, profile, API) runs on this URL.
+
+---
+
+## Option 1: Render (manual)
 
 1. Go to https://render.com
 2. Sign up/login with GitHub
