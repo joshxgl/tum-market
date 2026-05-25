@@ -102,11 +102,14 @@ document.addEventListener("DOMContentLoaded", () => {
             loginBtn.innerHTML = `<div class="profile-circle">${initials.toUpperCase()}</div>`;
         }
 
-        loginBtn.onclick = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            profileDropdown?.classList.toggle('active');
-        };
+        // Using event listener instead of onclick to avoid conflicts
+        loginBtn.addEventListener('click', toggleProfileDropdown);
+    }
+
+    function toggleProfileDropdown(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        profileDropdown?.classList.toggle('active');
     }
 
     function logout() {
@@ -232,6 +235,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const res = await requestJson(`/api/notifications/${id}/read`, { method: 'POST' });
         if (res.success) loadNotifications();
     }
+
+    document.getElementById('clearNotisBtn')?.addEventListener('click', async () => {
+        const res = await requestJson('/api/notifications/clear', { method: 'DELETE' });
+        if (res.success) loadNotifications();
+    });
 
     // --- Event Listeners ---
     toggleAuthMode?.addEventListener('click', () => {
@@ -391,6 +399,7 @@ document.addEventListener("DOMContentLoaded", () => {
     notificationBtn?.addEventListener('click', () => notificationDropdown?.classList.toggle('active'));
     postAdBtn?.addEventListener('click', () => isLoggedIn() ? openModal(adModal) : openModal(authModal));
     loginBtn?.addEventListener('click', () => !isLoggedIn() && openModal(authModal));
+    document.getElementById('profileDdLogout')?.addEventListener('click', logout);
     document.querySelectorAll('.close-btn, #closeModalBtn, #closeAuthBtn').forEach(btn => btn.addEventListener('click', () => {
         closeModal(adModal); closeModal(authModal); closeModal(detailsModal);
     }));

@@ -66,5 +66,5 @@ gunicorn app:app
 
 ## Notes
 
-- This app stores data in `users.json`, `listings.json`, and `not.json`.
-- For production, move data storage to a proper database and secure secrets.
+- This app uses SQLAlchemy with SQLite for local development and is PostgreSQL-ready for production.
+- Images are stored externally on Cloudinary to preserve server capacity.

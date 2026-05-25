@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Edit Modal Elements
     const editModal = document.getElementById('editModal');
     const closeEditModalBtn = document.getElementById('closeEditModalBtn');
+    const clearAllBtn = document.getElementById('clearAllListingsBtn');
     const editAdForm = document.getElementById('editAdForm');
     const editAdTitleInput = document.getElementById('editAdTitle');
     const editAdTitleCounter = document.getElementById('editAdTitleCounter');
@@ -99,7 +100,18 @@ document.addEventListener("DOMContentLoaded", () => {
     window.markAsSold = async (id) => {
         const res = await requestJson(`/api/listings/${id}/sold`, { method: 'PATCH' });
         if (res.success) loadDashboard();
+        else alert(res.message);
     };
+
+    clearAllBtn?.addEventListener('click', async () => {
+        if (!confirm("Are you sure you want to delete ALL your listings? This cannot be undone.")) return;
+        const res = await requestJson('/api/user/listings/clear', { method: 'DELETE' });
+        if (res.success) {
+            loadDashboard();
+        } else {
+            alert(res.message);
+        }
+    });
 
     window.editListing = (id) => {
         const item = currentListings.find(l => l.id === id);

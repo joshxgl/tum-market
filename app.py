@@ -278,6 +278,47 @@ def handle_listings():
     ]
     return jsonify({"success": True, "listings": available_listings})
 
+@app.route('/api/listings/<int:listing_id>', methods=['PUT', 'DELETE'])
+def handle_single_listing(listing_id):
+    if 'user_id' not in session:
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
+
+    target = db.session.get(Listing, listing_id)
+    if not target:
+        return jsonify({"success": False, "message": "Listing not found."}), 404
+    
+    if target.user_id != session['user_id']:
+        return jsonify({"success": False, "message": "Permission denied."}), 403
+
+    if request.method == 'DELETE':
+        db.session.delete(target)
+        db.session.commit()
+        return jsonify({"success": True, "message": "Listing deleted successfully."})
+
+    if request.method == 'PUT':
+        data = request.get_json() or {}
+        if 'title' in data: target.title = data['title'].strip()
+        if 'location' in data: target.location = data['location'].strip()
+        if 'category' in data: target.category = data['category'].strip()
+        if 'seller_phone' in data: target.seller_phone = data['seller_phone'].strip()
+        if 'price' in data:
+            try:
+                target.price = float(data['price'])
+            except (ValueError, TypeError):
+                pass
+
+        image = data.get('image', '').strip()
+        if image and image.startswith('data:image/'):
+            try:
+                upload_result = cloudinary.uploader.upload(image, folder="tum_market/listings")
+                target.image = upload_result.get('secure_url')
+            except Exception as e:
+                app.logger.error(f"Cloudinary Listing Update Error: {str(e)}")
+                return jsonify({"success": False, "message": f"Image update error: {str(e)}"}), 500
+
+        db.session.commit()
+        return jsonify({"success": True, "message": "Listing updated successfully!"})
+
 @app.route('/api/user/listings', methods=['GET'])
 def get_user_listings():
     if 'user_id' not in session:
@@ -291,41 +332,15 @@ def get_user_listings():
     ]
     return jsonify({"success": True, "listings": user_items})
 
-@app.route('/api/listings/<int:listing_id>', methods=['PUT'])
-def update_listing(listing_id):
+@app.route('/api/user/listings/clear', methods=['DELETE'])
+def clear_user_listings():
     if 'user_id' not in session:
         return jsonify({"success": False, "message": "Unauthorized"}), 401
-
-    listing = db.session.get(Listing, listing_id)
-    if not listing:
-        return jsonify({"success": False, "message": "Listing not found."}), 404
     
-    if listing.user_id != session['user_id']:
-        return jsonify({"success": False, "message": "Permission denied."}), 403
-
-    data = request.get_json() or {}
-    
-    if 'title' in data: listing.title = data['title'].strip()
-    if 'location' in data: listing.location = data['location'].strip()
-    if 'category' in data: listing.category = data['category'].strip()
-    if 'seller_phone' in data: listing.seller_phone = data['seller_phone'].strip()
-    if 'price' in data:
-        try:
-            listing.price = float(data['price'])
-        except (ValueError, TypeError):
-            pass
-
-    image = data.get('image', '').strip()
-    if image and image.startswith('data:image/'):
-        try:
-            upload_result = cloudinary.uploader.upload(image, folder="tum_market/listings")
-            listing.image = upload_result.get('secure_url')
-        except Exception as e:
-            app.logger.error(f"Cloudinary Listing Update Error: {str(e)}")
-            return jsonify({"success": False, "message": f"Image update error: {str(e)}"}), 500
-
+    # Efficiently delete all listings belonging to the session user
+    db.session.query(Listing).filter_by(user_id=session['user_id']).delete()
     db.session.commit()
-    return jsonify({"success": True, "message": "Listing updated successfully!"})
+    return jsonify({"success": True, "message": "All your listings have been removed."})
 
 @app.route('/api/listings/<int:listing_id>/sold', methods=['POST', 'PATCH'])
 def mark_as_sold_api(listing_id):
@@ -342,22 +357,6 @@ def mark_as_sold_api(listing_id):
     listing.status = 'sold'
     db.session.commit()
     return jsonify({"success": True, "message": "Item successfully marked as sold!"})
-
-@app.route('/api/listings/<int:listing_id>', methods=['DELETE'])
-def delete_listing(listing_id):
-    if 'user_id' not in session:
-        return jsonify({"success": False, "message": "Unauthorized"}), 401
-
-    target = db.session.get(Listing, listing_id)
-    if not target:
-        return jsonify({"success": False, "message": "Listing not found."}), 404
-    
-    if target.user_id != session['user_id']:
-        return jsonify({"success": False, "message": "Permission denied."}), 403
-
-    db.session.delete(target)
-    db.session.commit()
-    return jsonify({"success": True, "message": "Listing deleted successfully."})
 
 @app.route('/api/notifications')
 def get_notifications():
@@ -385,8 +384,27 @@ def mark_notification_read(noti_id):
     db.session.commit()
     return jsonify({"success": True})
 
-@app.route('/api/reset_data', methods=['POST'])
+@app.route('/api/notifications/clear', methods=['DELETE'])
+def clear_notifications():
+    if 'user_id' not in session:
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
+    
+    user_id = session['user_id']
+    # Instead of deleting, we mark all as read to keep a record, or delete user-specific ones
+    stmt = db.update(Notification).where(
+        (Notification.user_id == None) | (Notification.user_id == user_id)
+    ).values(is_read=True)
+    
+    db.session.execute(stmt)
+    db.session.commit()
+    return jsonify({"success": True, "message": "All notifications cleared."})
+
+@app.route('/api/reset_data', methods=['GET', 'POST'])
+@app.route('/api/reset_data/', methods=['GET', 'POST'])
 def reset_data():
+    if request.method == 'GET':
+        return jsonify({"success": False, "message": "Method not allowed. Please use POST."}), 405
+
     # Security: Only allow reset if a secret key matches
     # Set ADMIN_RESET_KEY in your Render environment variables
     admin_key = request.headers.get('X-Admin-Key')
@@ -394,14 +412,20 @@ def reset_data():
         return jsonify({"success": False, "message": "Unauthorized"}), 403
 
     with app.app_context():
-        db.session.query(User).delete()
+        db.session.query(Notification).delete()
         db.session.query(Listing).delete()
+        db.session.query(User).delete()
         db.session.commit()
     return jsonify({"success": True, "message": "User and listing data has been reset."})
 
 
-@app.route('/<path:filename>')
+@app.route('/<path:filename>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
 def serve_static(filename):
+    if filename.startswith('api/'):
+        return jsonify({"success": False, "message": "Invalid API endpoint."}), 404
+    if request.method != 'GET':
+        return jsonify({"success": False, "message": "Method not allowed for static files."}), 405
+
     return send_from_directory(STATIC_FOLDER, filename)
 
 if __name__ == '__main__':
