@@ -44,6 +44,8 @@
         </nav>
     </header>
 
+    <div id="featuredContainer" class="featured-section" style="display: none;"></div>
+
     <section class="search-section">
 
         <form class="search-bar" id="marketplaceSearchForm">
@@ -111,7 +113,8 @@
 
             <form id="postAdForm">
 
-                <input type="text" id="adTitle" placeholder="Item title" required>
+                <input type="text" id="adTitle" placeholder="Item title" required maxlength="200">
+                <div id="adTitleCounter" class="char-counter">0 / 200</div>
 
                 <input type="number" id="adPrice" placeholder="Price" required>
 

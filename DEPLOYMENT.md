@@ -10,6 +10,13 @@
 
 Share that URL with users. The full Flask app (login, listings, profile, API) runs on this URL.
 
+### Required Environment Variables
+To ensure images work correctly, add these in the **Environment** tab:
+- `CLOUDINARY_URL`: Your full connection string from the Cloudinary dashboard.
+- `REDIS_URL`: The Internal Redis URL from your Render Redis instance (for production rate limiting).
+- `SECRET_KEY`: A long random string for session security.
+- `ADMIN_RESET_KEY`: The secret key used to reset the database.
+
 ---
 
 ## Option 1: Render (manual)
