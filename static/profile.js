@@ -54,7 +54,72 @@ document.addEventListener("DOMContentLoaded", () => {
         if (listingsRes.success) {
             currentListings = listingsRes.listings;
             renderUserListings(listingsRes.listings);
+            displayTotalViews(listingsRes.total_views);
+            renderSubscriptionToggle(sessionRes.is_subscribed, sessionRes.subscription_updated_at);
         }
+    }
+
+    function renderSubscriptionToggle(isSubscribed, updatedAt) {
+        const infoPanel = document.querySelector('.profile-info');
+        if (!infoPanel) return;
+
+        let container = document.getElementById('subSettingContainer');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'subSettingContainer';
+            container.className = 'subscription-setting';
+            infoPanel.appendChild(container);
+        }
+
+        const dateStr = updatedAt ? new Date(updatedAt).toLocaleString(undefined, {
+            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+        }) : 'Never';
+
+        container.innerHTML = `
+            <div class="switch-label">
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                    <span>Weekly Performance Emails</span>
+                    <small class="sub-updated-at" id="subUpdateLabel">Last updated: ${dateStr}</small>
+                </div>
+                <div style="display: flex; align-items: center;">
+                    <label class="switch">
+                        <input type="checkbox" id="subCheckbox" ${isSubscribed ? 'checked' : ''}>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('subCheckbox').onchange = async (e) => {
+            const res = await requestJson('/api/user/subscription', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_subscribed: e.target.checked })
+            });
+            if (res.success) {
+                const newDate = new Date(res.subscription_updated_at).toLocaleString(undefined, {
+                    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                });
+                document.getElementById('subUpdateLabel').textContent = `Last updated: ${newDate}`;
+            } else {
+                alert(res.message);
+            }
+        };
+    }
+
+    function displayTotalViews(count) {
+        if (!userEmailEl) return;
+        const parent = userEmailEl.parentElement;
+        let statsEl = document.getElementById('userTotalViews');
+        
+        if (!statsEl) {
+            statsEl = document.createElement('p');
+            statsEl.id = 'userTotalViews';
+            statsEl.className = 'profile-stats';
+            parent.appendChild(statsEl);
+        }
+        
+        statsEl.innerHTML = `📊 Total Shop Views: <strong>${count.toLocaleString()}</strong>`;
     }
 
     function updateAvatar(name, pic) {
@@ -83,7 +148,10 @@ document.addEventListener("DOMContentLoaded", () => {
                         </span>
                     </div>
                     <p style="font-size: 1.4rem; font-weight: 800; color: var(--accent-2); margin-bottom: 15px;">KES ${item.price.toLocaleString()}</p>
-                    <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 20px;">📍 ${item.location}</p>
+                    <div style="display: flex; justify-content: space-between; color: #64748b; font-size: 0.9rem; margin-bottom: 20px;">
+                        <span>📍 ${item.location}</span>
+                        <span>👁️ ${item.views || 0} views</span>
+                    </div>
                     
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
                         <button onclick="editListing(${item.id})" class="btn-view" style="grid-column: span 2; margin-bottom: 8px;">Edit Ad</button>

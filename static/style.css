@@ -16,14 +16,17 @@ html{
     --bg-gradient-top: rgba(6,8,27,0.85);
     --bg-gradient-bottom: rgba(2,6,23,0.75);
     --accent: #2563eb; /* primary blue */
-    --accent-2: #10b981; /* success/price green */
+    --accent-2: #10b981; /* success green */
     --accent-cta: #f59e0b; /* warm CTA amber */
+    --danger: #ef4444; /* professional red */
+    --dark-depth: #020617; /* deep black */
+    --dark-surface: #0f172a; /* surface black */
     --card-bg: rgba(255,255,255,0.98);
     --card-text: #0f172a;
     --muted: #94a3b8;
     min-height:100vh;
     padding:20px;
-    background: linear-gradient(180deg, var(--bg-gradient-top), var(--bg-gradient-bottom)), url('https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=1600&auto=format&fit=crop&ixlib=rb-4.0.3&s=') center/cover no-repeat;
+    background: linear-gradient(180deg, var(--dark-depth), var(--bg-gradient-bottom)), url('https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=1600&auto=format&fit=crop&ixlib=rb-4.0.3&s=') center/cover no-repeat fixed;
     color:white;
     position:relative;
     overflow-x:hidden;
@@ -53,7 +56,7 @@ body{
     left:0;
     width:100%;
     z-index:1000;
-    background:rgba(15,23,42,0.96);
+    background:rgba(2, 6, 23, 0.98);
     backdrop-filter:blur(12px);
     padding:18px 40px;
     display:flex;
@@ -74,7 +77,7 @@ body{
 .logo .brand{
     display:block;
     font-size:2.6rem;
-    background: linear-gradient(90deg, #7c3aed 0%, var(--accent-2) 45%, #3b82f6 100%);
+    background: linear-gradient(90deg, #ef4444 0%, var(--accent) 45%, #7c3aed 100%);
     background-clip: text;
     -webkit-background-clip: text;
     color: transparent;
@@ -192,7 +195,7 @@ body{
     position:absolute;
     top:100%;
     right:0;
-    width:160px;
+    width:180px;
     background:#111827;
     color:#f8fafc;
     border-radius:12px;
@@ -220,7 +223,7 @@ body{
 }
 
 .profile-dd-item:hover{ background:rgba(255,255,255,0.03); color:#fff; }
-.profile-dd-item[aria-disabled="true"]{ opacity:0.6; cursor:default; }
+.profile-dd-item.danger{ color: var(--danger); }
 
 /* PROFILE DASHBOARD STYLES */
 .profile-header {
@@ -231,7 +234,7 @@ body{
 }
 
 .btn-sold:hover { background: #059669 !important; transform: translateY(-2px); transition: 0.2s; }
-.btn-delete:hover { background: #dc2626 !important; transform: translateY(-2px); transition: 0.2s; }
+.btn-delete { background: var(--danger) !important; color: white !important; }
 
 .listings-grid {
     display: grid;
@@ -329,7 +332,7 @@ body{
     position:absolute;
     top:-5px;
     right:-8px;
-    background:#f43f5e;
+    background:var(--danger);
     color:white;
     min-width:20px;
     height:20px;
@@ -408,7 +411,7 @@ body{
 
 /* SEARCH SECTION */
 .search-section{
-    background:rgba(15,23,42,0.92);
+    background:rgba(15,23,42,0.95);
     padding:22px;
     border-radius:18px;
     margin-bottom:25px;
@@ -445,6 +448,11 @@ body{
 .search-bar button:hover{
     background:#1e40af;
     transform:translateY(-2px);
+}
+
+/* RED TAG FOR URGENT SEARCH */
+.search-bar input:focus {
+    outline: 2px solid var(--danger);
 }
 
 /* FEATURED TOP SECTION */
@@ -543,7 +551,7 @@ body{
 
 .category-card:hover{
     transform:translateY(-4px);
-    background:#2563eb;
+    background:var(--accent);
     color:white;
 }
 
@@ -586,7 +594,7 @@ body{
 .price{
     font-size:2rem;
     font-weight:800;
-    color:var(--accent-2);
+    color:var(--danger); /* Price highlight in Red */
 }
 
 .card-info h4{
@@ -602,6 +610,15 @@ body{
     color:#6b7280;
     margin-top:8px;
     font-size:14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.view-count {
+    font-size: 0.85em;
+    color: var(--muted);
 }
 
 .card-actions{ margin-top:15px; }
@@ -637,6 +654,22 @@ body{
     font-size:13px;
     font-weight:800;
     z-index:5;
+}
+
+.trending-ribbon {
+    position: absolute;
+    top: 15px;
+    right: -35px;
+    background: var(--danger);
+    color: white;
+    padding: 5px 40px;
+    transform: rotate(45deg);
+    font-size: 0.7rem;
+    font-weight: 900;
+    z-index: 10;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    letter-spacing: 1px;
+    text-transform: uppercase;
 }
 
 /* ==========================================================================
@@ -723,19 +756,18 @@ form button:hover{ background:#059669; }
     z-index:999;
     width:auto;
     max-width:92vw;
-    font-family:'Segoe UI', sans-serif;
 }
 
 .assistant-toggle{
-    width:56px;
-    height:56px;
+    width:60px;
+    height:60px;
     margin-right:0;
     border-radius:50%;
-    border:2px solid rgba(255,255,255,0.18);
-    background:linear-gradient(135deg, #22c55e 0%, #0ea5a0 100%);
+    border:none;
+    background:linear-gradient(135deg, var(--danger) 0%, #b91c1c 100%);
     color:#f8fafc;
     cursor:pointer;
-    box-shadow:0 18px 44px rgba(0,0,0,0.35);
+    box-shadow:0 10px 25px rgba(239, 68, 68, 0.4);
     font-size:1.2rem;
     display:flex;
     align-items:center;
@@ -744,9 +776,26 @@ form button:hover{ background:#059669; }
 }
 
 .assistant-toggle:hover{
-    transform:translateY(-3px);
-    background:linear-gradient(135deg, #16a34a 0%, #08918a 100%);
+    transform:translateY(-3px) scale(1.05);
 }
+
+/* THE 'X' CLOSE BUTTON */
+.assistant-header .close-btn-ai {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s;
+}
+
+.assistant-header .close-btn-ai:hover { background: var(--danger); }
 
 .assistant-panel{
     position:absolute;
@@ -754,10 +803,11 @@ form button:hover{ background:#059669; }
     top:-400px;
     right:0;
     width:320px;
-    max-height:380px;
-    background:rgba(15,23,42,0.98);
-    border:1px solid rgba(16,185,129,0.18);
-    border-radius:24px;
+    height:500px;
+    max-height: 80vh;
+    background:var(--dark-surface);
+    border:1px solid rgba(255,255,255,0.1);
+    border-radius:20px;
     box-shadow:0 32px 60px rgba(0,0,0,0.45);
     overflow:hidden;
     opacity:0;
@@ -777,13 +827,11 @@ form button:hover{ background:#059669; }
     justify-content:space-between;
     align-items:center;
     padding:14px 16px;
-    background:rgba(15,23,42,0.98);
+    background:var(--dark-depth);
     border-bottom:1px solid rgba(255,255,255,0.08);
     color:#f8fafc;
     font-weight:700;
 }
-
-.assistant-header button{ background:transparent; border:none; color:#f8fafc; font-size:1.2rem; cursor:pointer; }
 
 .assistant-messages{
     display:flex;
@@ -798,12 +846,12 @@ form button:hover{ background:#059669; }
 
 .assistant-message{ padding:12px 14px; border-radius:18px; max-width:85%; line-height:1.4; font-size:0.95rem; }
 .assistant-message.bot{ align-self:flex-start; background:rgba(59,130,246,0.12); color:#e2e8f0; }
-.assistant-message.user{ align-self:flex-end; background:#10b981; color:#fff; }
+.assistant-message.user{ align-self:flex-end; background:var(--danger); color:#fff; }
 
 .assistant-form{ display:flex; gap:10px; padding:14px 16px; background:#111827; border-top:1px solid rgba(255,255,255,0.08); }
 .assistant-form input{ flex:1; min-width:0; padding:12px 16px; border-radius:999px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.05); color:#f8fafc; }
 .assistant-form input::placeholder{ color:rgba(248,250,252,0.65); }
-.assistant-form button{ padding:12px 18px; border-radius:999px; border:none; background:#06b6d4; color:#fff; cursor:pointer; font-weight:700; }
+.assistant-form button{ padding:12px 18px; border-radius:999px; border:none; background:var(--accent); color:#fff; cursor:pointer; font-weight:700; }
 
 #assistantPanel { display: flex; flex-direction: column; height: 500px; max-height: 85vh; box-sizing: border-box; }
 #assistantMessages { flex: 1; overflow-y: auto; padding-bottom: 10px; }
@@ -1025,9 +1073,9 @@ form button:hover{ background:#059669; }
     .price,
     #listingsContainer .price,
     .listing-card p {
-        font-size: 13px !important;
+        font-size: 14px !important;
         font-weight: 800 !important;
-        color: #10b981 !important;
+        color: var(--danger) !important;
         margin: 2px 0 !important;
         padding: 0 !important;
     }
@@ -1036,6 +1084,60 @@ form button:hover{ background:#059669; }
     .location,
     #listingsContainer span,
     #listingsContainer small {
+        font-size: 11px !important;
+        color: #64748b !important;
+        margin: 0 0 4px 0 !important;
+        display: flex !important;
+        justify-content: space-between !important;
+    }
+    
+    /* Minimal Action Action Footers */
+    .card-actions {
+        margin-top: auto !important;
+        padding: 0 !important;
+    }
+
+    .btn-view,
+    #listingsContainer button,
+    .listing-card .view-btn {
+        width: 100% !important;
+        height: 30px !important;
+        line-height: 30px !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        padding: 0 !important;
+        border-radius: 4px !important;
+    }
+
+    /* Modals & Popups Overrides */
+    .modal-content,
+    #detailsModal .modal-content,
+    #adModal .modal-content,
+    #authModal .modal-content {
+        width: 95vw !important;
+        max-height: 85vh !important;
+        padding: 16px !important;
+        border-radius: 12px !important;
+    }
+    
+    .details-card { flex-direction: column !important; gap: 12px !important; }
+    .details-card .details-image { width: 100% !important; max-width: 100% !important; flex: unset !important; }
+    .whatsapp-btn { width: 100% !important; justify-content: center; }
+    .assistant-widget { right: 12px !important; bottom: 12px !important; }
+    .assistant-panel { width: calc(100vw - 24px) !important; top: -340px !important; }
+}
+
+/* ==========================================================================
+   LANDSCAPE MODE OPTIMIZATIONS
+   ========================================================================== */
+@media(max-height:600px) and (orientation:landscape){
+    body{ padding-top:80px !important; }
+    .navbar{ padding:10px 14px !important; }
+    .logo .brand{ font-size:1.3rem !important; }
+    .search-section{ padding:8px !important; }
+    .search-bar input{ min-height:40px !important; }
+    .modal-body{ max-height:500px !important; overflow-y:auto !important; }
+}
         font-size: 11px !important;
         color: #64748b !important;
         margin: 0 0 4px 0 !important;

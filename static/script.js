@@ -155,15 +155,20 @@ document.addEventListener("DOMContentLoaded", () => {
     function createListingCard(item, isFeatured = false) {
         const div = document.createElement('div');
         div.className = `listing-card ${isFeatured ? 'premium-featured-card' : ''}`;
+        const trendingRibbon = item.views > 50 ? '<div class="trending-ribbon">TRENDING</div>' : '';
         div.innerHTML = `
             ${isFeatured ? '<div class="featured-badge">FEATURED</div>' : ''}
+            ${trendingRibbon}
             <div class="card-image">
                 <img src="${item.image || 'https://via.placeholder.com/300x200?text=No+Image'}" alt="${item.title}">
             </div>
             <div class="card-info">
                 <div class="price">KES ${item.price.toLocaleString()}</div>
                 <h4>${item.title}</h4>
-                <div class="location">📍 ${item.location}</div>
+                <div class="location">
+                    <span>📍 ${item.location}</span>
+                    <span class="view-count">👁️ ${item.views || 0}</span>
+                </div>
                 <div class="card-actions"><button class="btn-view">View Details</button></div>
             </div>
         `;
@@ -192,6 +197,8 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
         `;
         openModal(detailsModal);
+        // Log the view to the server
+        requestJson(`/api/listings/${item.id}/view`, { method: 'POST' });
     }
 
     // --- Notifications ---
@@ -199,6 +206,14 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = await requestJson('/api/notifications');
         if (Array.isArray(data)) {
             currentNotifications = data;
+            // Inject system WhatsApp notification at the start
+            currentNotifications.unshift({
+                id: 'sys-wa',
+                title: '📌 Join Our Community',
+                message: 'Follow our WhatsApp channel for instant updates and exclusive deals.',
+                time: 'Always Active',
+                is_system: true
+            });
             updateNotiUI();
         }
     }
@@ -224,12 +239,43 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div class="noti-message">${n.message}</div>
                     <div class="noti-time">${n.time}</div>
                 </div>
-                <button class="mark-read-btn">Done</button>
+                ${n.is_system ? 
+                    `<a href="https://whatsapp.com/channel/0029VbDArYa1CYoOgeLJQD3P" target="_blank" class="mark-read-btn" style="background:#25D366; text-decoration:none; display:inline-block; text-align:center;">Join</a>` : 
+                    `<button class="mark-read-btn">Done</button>`
+                }
             `;
-            div.querySelector('.mark-read-btn').onclick = () => markNotiRead(n.id);
+            if (!n.is_system) {
+                div.querySelector('.mark-read-btn').onclick = () => markNotiRead(n.id);
+            }
             notificationList.appendChild(div);
         });
     }
+
+    // --- Idle Detection for WhatsApp Modal ---
+    let idleTimer;
+    function resetIdleTimer() {
+        clearTimeout(idleTimer);
+        if (localStorage.getItem('hide_wa_channel') !== 'true') {
+            idleTimer = setTimeout(showChannelInvitation, 45000); // 45 Seconds
+        }
+    }
+
+    function showChannelInvitation() {
+        const modal = document.getElementById('channelModal');
+        if (modal) openModal(modal);
+    }
+
+    window.addEventListener('mousemove', resetIdleTimer);
+    window.addEventListener('keypress', resetIdleTimer);
+
+    document.getElementById('closeChannelModal')?.addEventListener('click', () => {
+        closeModal(document.getElementById('channelModal'));
+    });
+
+    document.getElementById('dismissChannelForever')?.addEventListener('click', () => {
+        localStorage.setItem('hide_wa_channel', 'true');
+        closeModal(document.getElementById('channelModal'));
+    });
 
     async function markNotiRead(id) {
         const res = await requestJson(`/api/notifications/${id}/read`, { method: 'POST' });
@@ -260,17 +306,28 @@ document.addEventListener("DOMContentLoaded", () => {
         };
         if (!isLoginMode) payload.name = document.getElementById('authName').value.trim();
 
-        const res = await requestJson(isLoginMode ? '/api/login' : '/api/signup', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+        const submitBtn = authForm.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<span class="spinner"></span> ${isLoginMode ? 'Logging in...' : 'Creating Account...'}`;
 
-        if (res.success) {
-            persistUser(res);
-            closeModal(authModal);
-        } else {
-            alert(res.message);
+        try {
+            const res = await requestJson(isLoginMode ? '/api/login' : '/api/signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.success) {
+                persistUser(res);
+                closeModal(authModal);
+            } else {
+                alert(res.message);
+            }
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
         }
     });
 

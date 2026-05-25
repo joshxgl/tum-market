@@ -2,7 +2,12 @@ import os
 import psycopg2
 
 # Paste your actual external database URL from Render between the quotes below:
-DB_URL = "postgresql://tummarketdb_3zvv_user:h2drFowx6C48PLUJ0KnnT85PqS6o2F9D@dpg-d8a5023eo5us739e999g-a.oregon-postgres.render.com/tum_market_db"
+# Hardcoded URL removed for security. Ensure DATABASE_URL is set in your environment.
+DB_URL = os.environ.get("DATABASE_URL")
+
+if not DB_URL:
+    print("❌ Error: DATABASE_URL environment variable is not set. Cannot wipe database.")
+    exit(1)
 
 try:
     print("⏳ Connecting directly to Render PostgreSQL...")

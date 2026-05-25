@@ -165,6 +165,49 @@ body::before{
     word-break:break-all;
 }
 
+.profile-stats{
+    margin-top: 12px;
+    font-size: clamp(0.9rem, 2.6vw, 1.1rem);
+    color: #10b981; /* Success green */
+    background: rgba(16, 185, 129, 0.1);
+    padding: 6px 14px;
+    border-radius: 99px;
+    display: inline-block;
+}
+
+.subscription-setting {
+    margin-top: 18px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.switch-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    font-size: 0.95rem;
+    color: #cbd5e1;
+}
+
+.sub-updated-at {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-weight: normal;
+}
+
+/* Modern Toggle Switch */
+.switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; inset: 0; background-color: #334155; transition: .4s; border-radius: 24px; }
+.slider:before { 
+    position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; 
+    background-color: white; transition: .4s; border-radius: 50%; 
+}
+
+input:checked + .slider { background-color: #10b981; }
+input:checked + .slider:before { transform: translateX(20px); }
+
 .listings-section{
     margin-top:clamp(16px, 4vw, 30px);
 }
