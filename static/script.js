@@ -102,8 +102,8 @@ document.addEventListener("DOMContentLoaded", () => {
             loginBtn.innerHTML = `<div class="profile-circle">${initials.toUpperCase()}</div>`;
         }
 
-        // Using event listener instead of onclick to avoid conflicts
-        loginBtn.addEventListener('click', toggleProfileDropdown);
+        // Using onclick assignment to ensure only one handler exists regardless of UI updates
+        loginBtn.onclick = toggleProfileDropdown;
     }
 
     function toggleProfileDropdown(e) {

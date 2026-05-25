@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
+app.url_map.strict_slashes = False  # Best practice: Treat /api/route and /api/route/ the same
 app.secret_key = os.environ.get('SECRET_KEY', 'tum_market_secret')
 
 # Increase max content length to allow for base64 image uploads (16MB)
@@ -31,6 +32,14 @@ limiter = Limiter(
     default_limits=["500 per hour", "100 per minute"],
     strategy="fixed-window",
 )
+
+# Global handler to ensure all 405 errors return JSON instead of HTML
+@app.errorhandler(405)
+def method_not_allowed(e):
+    return jsonify({
+        "success": False, 
+        "message": "Method not allowed for this endpoint. Ensure you are using the correct HTTP method (e.g., POST)."
+    }), 405
 
 # Best Practice: Return JSON errors for Rate Limits
 @app.errorhandler(429)
@@ -399,24 +408,24 @@ def clear_notifications():
     db.session.commit()
     return jsonify({"success": True, "message": "All notifications cleared."})
 
-@app.route('/api/reset_data', methods=['GET', 'POST'])
-@app.route('/api/reset_data/', methods=['GET', 'POST'])
+@app.route('/api/reset_data', methods=['POST'])
 def reset_data():
-    if request.method == 'GET':
-        return jsonify({"success": False, "message": "Method not allowed. Please use POST."}), 405
-
     # Security: Only allow reset if a secret key matches
     # Set ADMIN_RESET_KEY in your Render environment variables
     admin_key = request.headers.get('X-Admin-Key')
     if admin_key != os.environ.get('ADMIN_RESET_KEY', 'lowkey@odis.tumstandard'):
         return jsonify({"success": False, "message": "Unauthorized"}), 403
 
-    with app.app_context():
+    try:
         db.session.query(Notification).delete()
         db.session.query(Listing).delete()
         db.session.query(User).delete()
         db.session.commit()
-    return jsonify({"success": True, "message": "User and listing data has been reset."})
+        return jsonify({"success": True, "message": "User and listing data has been reset successfully."})
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Reset Data Error: {str(e)}")
+        return jsonify({"success": False, "message": f"Database reset failed: {str(e)}"}), 500
 
 
 @app.route('/<path:filename>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH'])
