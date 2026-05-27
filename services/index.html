@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Service Portal - TUM Market</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <div id="toastContainer" class="toast-container"></div>
+
+    <nav class="navbar">
+        <div class="navbar-content">
+            <a href="/" class="logo">
+                <span class="brand">TUM MARKET</span>
+                <span class="tagline">Service Portal</span>
+            </a>
+            <div class="nav-actions">
+                <button id="postJobBtn" class="btn-primary" style="display: none;">Post a Project Brief</button>
+                <a href="/profile" class="nav-back" id="myDashboardLink" style="display: none;">My Dashboard</a>
+                <a href="/" class="nav-back">Back to Marketplace</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Suspension Notice Banner -->
+    <div id="suspensionBanner" class="suspension-banner" style="display: none;">
+        <p>
+            <i class="fas fa-exclamation-triangle"></i> 
+            Your account is suspended. Access to certain features is restricted. 
+            <a href="mailto:support@tummarket.com" class="support-link">Contact Support</a>
+        </p>
+    </div>
+
+    <main class="feed-container">
+        <header class="feed-header">
+            <h1>Service Feed</h1>
+            <p>Directly connect with professional student talent at TUM.</p>
+        </header>
+
+        <div id="serviceFeed" class="job-feed">
+            <!-- Content injected via script.js -->
+            <div class="loading-state">Loading professional opportunities...</div>
+        </div>
+    </main>
+
+    <!-- Modal for Posting Jobs -->
+    <div id="jobModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" id="closeJobModal">&times;</span>
+            
+            <!-- Success Message State -->
+            <div id="jobSuccessState" class="success-state" style="display: none;">
+                <div class="success-icon"><i class="fas fa-check-circle"></i></div>
+                <h2>Project Brief Broadcasted!</h2>
+                <p>Your request has been sent to the matching engine. Qualified student takers will be notified instantly.</p>
+                <div class="success-actions">
+                    <button type="button" class="btn-primary" id="btnDone">Back to Feed</button>
+                    <a href="/profile" class="btn-secondary" id="viewMyPostsLink">View My Posts</a>
+                </div>
+            </div>
+
+            <!-- Form State -->
+            <h2>Broadcast a Project</h2>
+            <form id="jobForm">
+                <input type="text" id="jobTitle" placeholder="Job Title (e.g., UI/UX Designer)" required>
+                <textarea id="jobDesc" placeholder="Describe the project requirements..." required maxlength="500"></textarea>
+                <div id="jobDescCounter" class="char-counter">0 / 500</div>
+
+                <input type="text" id="clientName" placeholder="Your Name (Client Name)" required maxlength="100">
+                <div id="clientNameCounter" class="char-counter">0 / 100</div>
+                <input type="text" id="clientContact" placeholder="Your Contact (Email or Phone)" required maxlength="100">
+                <div id="clientContactCounter" class="char-counter">0 / 100</div>
+
+                <select id="requiredSkill" required>
+                    <option value="">Select Required Skill</option>
+                    <option value="Python">Python</option>
+                    <option value="Flask">Flask</option>
+                    <option value="Mathematics">Mathematics</option>
+                    <option value="Circuit Design">Circuit Design</option>
+                    <option value="Graphic Design">Graphic Design</option>
+                    <option value="Web Development">Web Development</option>
+                    <option value="Mobile App Development">Mobile App Development</option>
+                    <option value="Data Analysis">Data Analysis</option>
+                    <option value="Content Writing">Content Writing</option>
+                </select>
+
+                <input type="number" id="budgetAmount" placeholder="Budget Amount (e.g., 5000)" required min="0">
+                <div class="radio-group">
+                    <label><input type="radio" name="budgetType" value="Fixed" checked> Fixed</label>
+                    <label><input type="radio" name="budgetType" value="Negotiable"> Negotiable</label>
+                </div>
+                <button type="submit" class="btn-submit">Submit Brief</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Reporting Jobs -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" id="closeReportModal">&times;</span>
+            <h2>Report Job Posting</h2>
+            <form id="reportForm">
+                <input type="hidden" id="reportJobId">
+                <textarea id="reportReason" placeholder="Why are you reporting this job posting? (e.g., inappropriate content, scam, duplicate)" required maxlength="300"></textarea>
+                <div id="reportReasonCounter" class="char-counter">0 / 300</div>
+                <button type="submit" class="btn-submit">Submit Report</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

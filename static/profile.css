@@ -11,12 +11,12 @@ html{
 
 body{
     margin:0;
-    padding:clamp(16px, 4vw, 36px) clamp(10px, 3vw, 20px) clamp(40px, 8vw, 60px);
+    padding:clamp(10px, 2vw, 20px) clamp(10px, 3vw, 20px) clamp(20px, 4vw, 40px);
     min-height:100vh;
     color:#f8fafc;
     font-family:'Segoe UI', sans-serif;
-    font-size:clamp(14px, 2.8vw, 16px);
-    line-height:1.45;
+    font-size:clamp(13px, 2.5vw, 15px);
+    line-height:1.35;
     background: linear-gradient(180deg, rgba(6,8,27,0.92), rgba(2,6,23,0.88)), url('https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=1600&auto=format&fit=crop&ixlib=rb-4.0.3&s=') center/cover fixed no-repeat;
     background-size:cover;
 }
@@ -49,7 +49,7 @@ body::before{
     display:inline-flex;
     align-items:center;
     justify-content:center;
-    padding:clamp(10px, 2.5vw, 14px) clamp(14px, 3vw, 20px);
+    padding:clamp(8px, 2vw, 12px) clamp(12px, 2.5vw, 16px);
     border-radius:12px;
     font-weight:700;
     font-size:clamp(0.85rem, 2.5vw, 1rem);
@@ -85,11 +85,11 @@ body::before{
 .profile-header{
     background:rgba(15,23,42,0.95);
     border-radius:clamp(16px, 3vw, 28px);
-    padding:clamp(16px, 4vw, 32px);
+    padding:clamp(12px, 3vw, 24px);
     display:flex;
     align-items:center;
     justify-content:space-between;
-    gap:clamp(16px, 4vw, 30px);
+    gap:clamp(12px, 3vw, 20px);
     margin-bottom:clamp(20px, 4vw, 30px);
     box-shadow:0 16px 50px rgba(0,0,0,0.25);
     border:1px solid rgba(255,255,255,0.06);
@@ -111,8 +111,8 @@ body::before{
 }
 
 .profile-image{
-    width:clamp(90px, 22vw, 150px);
-    height:clamp(90px, 22vw, 150px);
+    width:clamp(80px, 18vw, 120px);
+    height:clamp(80px, 18vw, 120px);
     border-radius:clamp(16px, 3vw, 30px);
     object-fit:cover;
     border:4px solid rgba(255,255,255,0.18);
@@ -147,7 +147,7 @@ body::before{
 }
 
 .profile-info h1{
-    font-size:clamp(1.35rem, 5vw, 2.4rem);
+    font-size:clamp(1.2rem, 4vw, 1.8rem);
     margin:0 0 8px;
     word-break:break-word;
 }

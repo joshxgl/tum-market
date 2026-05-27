@@ -8,10 +8,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const searchInput = searchForm?.querySelector('input[type="text"]');
     const searchCategorySelect = searchForm?.querySelector('select');
     const categoryCards = document.querySelectorAll(".category-card");
+    const navLinks = document.querySelectorAll(".nav-link");
+    const searchSection = document.querySelector(".search-section");
 
     const postAdBtn = document.querySelector(".btn-post");
     const loginBtn = document.querySelector(".btn-login");
     const profileDropdown = document.getElementById("profileDropdown");
+    const adminPanelLink = document.getElementById("adminPanelLink");
     
     const adModal = document.getElementById("adModal");
     const postAdForm = document.getElementById("postAdForm");
@@ -41,6 +44,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const assistantInput = document.getElementById('assistantInput');
     const assistantMessages = document.getElementById('assistantMessages');
 
+    const backToTopBtn = document.getElementById("backToTop");
+    const progressCircle = backToTopBtn?.querySelector('.progress-ring__circle');
+    const radius = 22; // Matches the 'r' attribute in HTML
+    const circumference = 2 * Math.PI * radius;
+
     // State
     let currentUploadedImageBase64 = null;
     let isLoginMode = true;
@@ -48,6 +56,34 @@ document.addEventListener("DOMContentLoaded", () => {
     let currentNotifications = [];
 
     // --- Helpers ---
+    if (progressCircle) {
+        progressCircle.style.strokeDasharray = `${circumference} ${circumference}`;
+        progressCircle.style.strokeDashoffset = circumference;
+    }
+
+    function setProgress(percent) {
+        if (!progressCircle) return;
+        const offset = circumference - (percent / 100 * circumference);
+        progressCircle.style.strokeDashoffset = offset;
+    }
+
+    async function compressImage(base64, maxWidth = 1000) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.src = base64;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ratio = maxWidth / Math.max(img.width, img.height);
+                const width = ratio < 1 ? img.width * ratio : img.width;
+                const height = ratio < 1 ? img.height * ratio : img.height;
+                canvas.width = width;
+                canvas.height = height;
+                canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', 0.7));
+            };
+        });
+    }
+
     async function requestJson(url, options = {}) {
         try {
             const res = await fetch(url, options);
@@ -83,32 +119,38 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.setItem('tum_market_user', data.name);
         localStorage.setItem('tum_market_user_id', data.id);
         localStorage.setItem('tum_market_user_email', data.email);
+        localStorage.setItem('tum_market_is_admin', data.is_admin);
         if (data.profile_picture) {
             localStorage.setItem('tum_market_profile_pic', data.profile_picture);
         }
-        applyAuthenticatedUI(data.name, data.profile_picture);
+        applyAuthenticatedUI(data.name, data.profile_picture, data.is_admin);
     }
 
-    function applyAuthenticatedUI(name, profilePic) {
+    function applyAuthenticatedUI(name, profilePic, isAdmin) {
         if (!loginBtn) return;
         loginBtn.classList.add('has-profile');
         
+        const adminBadge = (isAdmin || localStorage.getItem('tum_market_is_admin') === 'true') ? '<div class="admin-badge-nav"><i class="fas fa-crown"></i></div>' : '';
         const pic = profilePic || localStorage.getItem('tum_market_profile_pic');
         if (pic) {
-            loginBtn.innerHTML = `<img src="${pic}" alt="Profile" class="profile-avatar-nav">`;
+            loginBtn.innerHTML = `<div class="avatar-nav-wrap"><img src="${pic}" alt="Profile" class="profile-avatar-nav">${adminBadge}</div>`;
         } else {
             const parts = (name || 'User').trim().split(/\s+/).filter(Boolean);
             const initials = parts.length === 1 ? parts[0][0] : (parts[0][0] + parts[parts.length - 1][0]);
-            loginBtn.innerHTML = `<div class="profile-circle">${initials.toUpperCase()}</div>`;
+            loginBtn.innerHTML = `<div class="avatar-nav-wrap"><div class="profile-circle">${initials.toUpperCase()}</div>${adminBadge}</div>`;
         }
 
         // Using onclick assignment to ensure only one handler exists regardless of UI updates
         loginBtn.onclick = toggleProfileDropdown;
+
+        // Conditionally show Admin Panel link
+        if (adminPanelLink) {
+            adminPanelLink.style.display = (isAdmin || localStorage.getItem('tum_market_is_admin') === 'true') ? 'block' : 'none';
+        }
     }
 
     function toggleProfileDropdown(e) {
         e.preventDefault();
-        e.stopPropagation();
         profileDropdown?.classList.toggle('active');
     }
 
@@ -200,6 +242,23 @@ document.addEventListener("DOMContentLoaded", () => {
         // Log the view to the server
         requestJson(`/api/listings/${item.id}/view`, { method: 'POST' });
     }
+
+    // --- Sticky Search Scroll Effect ---
+    window.addEventListener('scroll', () => {
+        const isStuck = window.scrollY > 20;
+        searchSection?.classList.toggle('is-stuck', isStuck);
+        backToTopBtn?.classList.toggle('active', isStuck);
+
+        const scrollTotal = document.documentElement.scrollHeight - window.innerHeight;
+        if (scrollTotal > 0) {
+            const scrollPercent = (window.scrollY / scrollTotal) * 100;
+            setProgress(scrollPercent);
+        }
+    });
+
+    backToTopBtn?.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
 
     // --- Notifications ---
     async function loadNotifications() {
@@ -304,7 +363,11 @@ document.addEventListener("DOMContentLoaded", () => {
             email: document.getElementById('authEmail').value.trim(),
             password: document.getElementById('authPassword').value.trim()
         };
-        if (!isLoginMode) payload.name = document.getElementById('authName').value.trim();
+        if (!isLoginMode) {
+            payload.name = document.getElementById('authName').value.trim();
+            payload.phone_number = document.getElementById('authPhone').value.trim();
+            payload.skills = document.getElementById('authSkills').value.trim();
+        }
 
         const submitBtn = authForm.querySelector('button[type="submit"]');
         const originalText = submitBtn.textContent;
@@ -331,12 +394,21 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // Password Visibility Toggle
+    document.getElementById('togglePassword')?.addEventListener('click', function() {
+        const passwordInput = document.getElementById('authPassword');
+        const isPassword = passwordInput.type === 'password';
+        passwordInput.type = isPassword ? 'text' : 'password';
+        this.classList.toggle('fa-eye', !isPassword);
+        this.classList.toggle('fa-eye-slash', isPassword);
+    });
+
     adImageInput?.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = (evt) => {
-            currentUploadedImageBase64 = evt.target.result;
+        reader.onload = async (evt) => {
+            currentUploadedImageBase64 = await compressImage(evt.target.result);
             imagePreview.src = currentUploadedImageBase64;
             imagePreviewContainer.style.display = 'block';
         };
@@ -426,48 +498,83 @@ document.addEventListener("DOMContentLoaded", () => {
     searchInput?.addEventListener('input', applyFilters);
     searchCategorySelect?.addEventListener('change', applyFilters);
     categoryCards.forEach(card => card.addEventListener('click', () => {
-        if (searchCategorySelect) searchCategorySelect.value = card.textContent.trim();
+        const cat = card.getAttribute('data-category');
+        if (searchCategorySelect && cat) {
+            searchCategorySelect.value = cat;
+        }
         applyFilters();
     }));
 
-    assistantToggle?.addEventListener('click', () => assistantPanel.classList.toggle('active'));
-    assistantClose?.addEventListener('click', () => assistantPanel.classList.remove('active'));
-    assistantForm?.addEventListener('submit', (e) => {
+    navLinks.forEach(link => link.addEventListener('click', (e) => {
         e.preventDefault();
-        const msg = assistantInput.value.trim();
-        if (!msg) return;
-        const userDiv = document.createElement('div');
-        userDiv.className = 'assistant-message user';
-        userDiv.textContent = msg;
-        assistantMessages.appendChild(userDiv);
-        assistantInput.value = '';
-        setTimeout(() => {
-            const botDiv = document.createElement('div');
-            botDiv.className = 'assistant-message bot';
-            botDiv.textContent = "I'm looking into that! You can search by category or post an ad to get started.";
-            assistantMessages.appendChild(botDiv);
-            assistantMessages.scrollTop = assistantMessages.scrollHeight;
-        }, 600);
-    });
+        // Update UI active state
+        navLinks.forEach(l => l.classList.remove('active'));
+        link.classList.add('active');
 
-    document.addEventListener('click', (e) => {
-        if (!profileDropdown?.contains(e.target) && !loginBtn?.contains(e.target)) profileDropdown?.classList.remove('active');
-        if (!notificationDropdown?.contains(e.target) && !notificationBtn?.contains(e.target)) notificationDropdown?.classList.remove('active');
-    });
-
-    notificationBtn?.addEventListener('click', () => notificationDropdown?.classList.toggle('active'));
-    postAdBtn?.addEventListener('click', () => isLoggedIn() ? openModal(adModal) : openModal(authModal));
-    loginBtn?.addEventListener('click', () => !isLoggedIn() && openModal(authModal));
-    document.getElementById('profileDdLogout')?.addEventListener('click', logout);
-    document.querySelectorAll('.close-btn, #closeModalBtn, #closeAuthBtn').forEach(btn => btn.addEventListener('click', () => {
-        closeModal(adModal); closeModal(authModal); closeModal(detailsModal);
+        // Sync with the search category dropdown
+        const navVal = link.getAttribute('data-nav');
+        if (searchCategorySelect) {
+            searchCategorySelect.value = (navVal === 'all') ? "" : navVal;
+        }
+        applyFilters();
     }));
 
-    // Init
-    syncNavbarHeight();
-    window.addEventListener('resize', syncNavbarHeight);
-    checkExistingSession();
-    fetchLiveListings();
-    loadNotifications();
+    // --- Unified Click Management (Dropdowns & Assistant) ---
+    document.addEventListener('click', (e) => {
+        const closeIfOutside = (panel, btn) => {
+            if (panel?.classList.contains('active') && !panel.contains(e.target) && !btn?.contains(e.target)) {
+                panel.classList.remove('active');
+            }
+        };
+        closeIfOutside(profileDropdown, loginBtn);
+        closeIfOutside(notificationDropdown, notificationBtn);
+        closeIfOutside(assistantPanel, assistantToggle);
+    });
+
+    assistantToggle?.addEventListener('click', (e) => {
+        assistantPanel?.classList.toggle('active');
+    });
+    assistantClose?.addEventListener('click', () => assistantPanel.classList.remove('active'));
+
+    assistantForm?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const text = assistantInput.value.trim();
+        if (!text) return;
+        
+        const appendMsg = (content, type) => {
+            const div = document.createElement('div');
+            div.className = `assistant-message ${type}`;
+            div.textContent = content;
+            assistantMessages.appendChild(div);
+            assistantMessages.scrollTop = assistantMessages.scrollHeight;
+        };
+
+        appendMsg(text, 'user');
+        assistantInput.value = '';
+        setTimeout(() => appendMsg("I'm here to help! Search for items or post an ad to start selling.", 'bot'), 600);
+    });
+
+    // --- Interactive Resizer ---
+    const resizeHandle = document.getElementById('assistantResizeHandle');
+    let isResizing = false;
+
+    resizeHandle?.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        document.body.classList.add('is-resizing');
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!isResizing || !assistantPanel) return;
+        const offsetTop = assistantPanel.getBoundingClientRect().top;
+        const newHeight = window.innerHeight - e.clientY - (window.innerHeight - assistantPanel.getBoundingClientRect().bottom);
+        if (newHeight > 200 && newHeight < window.innerHeight * 0.8) {
+            assistantPanel.style.height = `${newHeight}px`;
+        }
+    });
+
+    window.addEventListener('mouseup', () => {
+        isResizing = false;
+        document.body.classList.remove('is-resizing');
+    });
 });
     

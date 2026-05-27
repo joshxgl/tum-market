@@ -6,6 +6,29 @@ document.addEventListener("DOMContentLoaded", () => {
     const profilePicInput = document.getElementById('profilePicInput');
     const logoutBtn = document.getElementById('logoutBtn');
 
+    // User Profile Edit Elements
+    const openUserEditModalBtn = document.getElementById('openUserEditModalBtn');
+    const userEditModal = document.getElementById('userEditModal');
+    const closeUserEditModalBtn = document.getElementById('closeUserEditModalBtn');
+    const userEditForm = document.getElementById('userEditForm');
+    const displayPhone = document.getElementById('displayPhone');
+    const displaySkills = document.getElementById('displaySkills');
+    const editUserSkillsInput = document.getElementById('editUserSkills');
+    const editSkillsContainer = document.getElementById('editSkillsContainer');
+    const editSkillsCounter = document.getElementById('editSkillsCounter');
+
+    // Jobs and Appeal UI
+    const userJobsGrid = document.getElementById('userJobsGrid');
+    const appealModal = document.getElementById('appealModal');
+    const closeAppealModalBtn = document.getElementById('closeAppealModalBtn');
+    const appealForm = document.getElementById('appealForm');
+
+    // Verification UI
+    const verificationSection = document.getElementById('verificationSection');
+    const resumeInput = document.getElementById('resumeInput');
+    const resumeFileName = document.getElementById('resumeFileName');
+    const submitVerificationBtn = document.getElementById('submitVerificationBtn');
+
     // Edit Modal Elements
     const editModal = document.getElementById('editModal');
     const closeEditModalBtn = document.getElementById('closeEditModalBtn');
@@ -25,6 +48,26 @@ document.addEventListener("DOMContentLoaded", () => {
     let cropperInstance = null;
     let currentListings = [];
     let currentEditImageBase64 = null;
+    let editSkillsArray = [];
+    let verifiedSkillsArray = [];
+
+    // Client-side Image Compression Helper
+    async function compressImage(base64, maxWidth = 1000) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.src = base64;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ratio = maxWidth / Math.max(img.width, img.height);
+                const width = ratio < 1 ? img.width * ratio : img.width;
+                const height = ratio < 1 ? img.height * ratio : img.height;
+                canvas.width = width;
+                canvas.height = height;
+                canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', 0.7));
+            };
+        });
+    }
 
     // API Helper
     async function requestJson(url, options = {}) {
@@ -48,16 +91,149 @@ document.addEventListener("DOMContentLoaded", () => {
 
         userNameEl.textContent = sessionRes.name;
         userEmailEl.textContent = sessionRes.email;
-        updateAvatar(sessionRes.name, sessionRes.profile_picture);
+        updateAvatar(sessionRes.name, sessionRes.profile_picture, sessionRes.is_admin);
+
+        if (displayPhone) displayPhone.textContent = `📱 ${sessionRes.phone_number || 'No phone set'}`;
+        if (displaySkills) {
+            const skills = sessionRes.skills || 'None listed';
+            displaySkills.textContent = `🛠️ Skills: ${skills}`;
+        }
+        
+        verifiedSkillsArray = sessionRes.verified_skills ? sessionRes.verified_skills.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+        renderVerificationStatus(sessionRes);
 
         const listingsRes = await requestJson('/api/user/listings');
         if (listingsRes.success) {
             currentListings = listingsRes.listings;
             renderUserListings(listingsRes.listings);
+            renderUserJobs(listingsRes.jobs);
             displayTotalViews(listingsRes.total_views);
             renderSubscriptionToggle(sessionRes.is_subscribed, sessionRes.subscription_updated_at);
         }
     }
+
+    openUserEditModalBtn?.addEventListener('click', () => {
+        document.getElementById('editUserName').value = userNameEl.textContent;
+        document.getElementById('editUserPhone').value = displayPhone.textContent.replace('📱 ', '').replace('No phone set', '');
+        
+        const skillsText = displaySkills.textContent.replace('🛠️ Skills: ', '').replace('None listed', '');
+        editSkillsArray = skillsText ? skillsText.split(',').map(s => s.trim()).filter(Boolean) : [];
+        renderEditSkills();
+        
+        userEditModal.classList.add('active');
+    });
+
+    editUserSkillsInput?.addEventListener('input', () => {
+        const len = editUserSkillsInput.value.length;
+        if (editSkillsCounter) editSkillsCounter.textContent = `${len} / 30`;
+        editUserSkillsInput.classList.remove('error');
+    });
+
+    if (closeUserEditModalBtn) closeUserEditModalBtn.onclick = () => userEditModal.classList.remove('active');
+
+    editUserSkillsInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            const val = editUserSkillsInput.value.trim().replace(',', '');
+            if (val && !editSkillsArray.includes(val)) {
+                editSkillsArray.push(val);
+                renderEditSkills();
+            }
+            if (editSkillsCounter) editSkillsCounter.textContent = '0 / 30';
+            editUserSkillsInput.value = '';
+        }
+    });
+
+    function renderEditSkills() {
+        if (!editSkillsContainer) return;
+        editSkillsContainer.innerHTML = editSkillsArray.map((skill, index) => `
+            <span class="skill-badge-tag ${verifiedSkillsArray.includes(skill) ? 'is-verified' : ''}">
+                ${verifiedSkillsArray.includes(skill) ? '<i class="fas fa-certificate skill-verified-badge" title="Admin Verified"></i>' : ''}
+                <span>${skill}</span>
+                <i class="fas fa-times" onclick="removeEditSkill(${index})"></i>
+            </span>
+        `).join('');
+    }
+
+    window.removeEditSkill = (index) => {
+        editSkillsArray.splice(index, 1);
+        renderEditSkills();
+    };
+
+    userEditForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+            name: document.getElementById('editUserName').value.trim(),
+            phone_number: document.getElementById('editUserPhone').value.trim(),
+            skills: editSkillsArray.join(', ')
+        };
+
+        const res = await requestJson('/api/user/profile', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (res.success) {
+            userEditModal.classList.remove('active');
+            loadDashboard();
+        } else {
+            alert(res.message);
+        }
+    });
+
+    function renderVerificationStatus(user) {
+        verificationSection.style.display = 'block';
+        const content = document.getElementById('verificationStatusContent');
+        
+        if (user.is_skill_verified) {
+            content.innerHTML = `<p style="color: #10b981; font-weight: bold;">✅ You are a Verified Taker. You can now apply for jobs in the Service Portal.</p>`;
+        } else if (user.verification_status === 'pending') {
+            content.innerHTML = `<p style="color: #f59e0b; font-weight: bold;">⏳ Verification Pending. Our admins are reviewing your resume.</p>`;
+        }
+    }
+
+    resumeInput?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        const allowed = ['image/png', 'image/jpeg', 'image/webp'];
+        if (file && allowed.includes(file.type)) {
+            resumeFileName.textContent = file.name;
+            submitVerificationBtn.style.display = 'block';
+        } else {
+            alert("PDFs are not allowed. Please select an image (.png, .jpg, or .webp).");
+            resumeInput.value = '';
+        }
+    });
+
+    submitVerificationBtn?.addEventListener('click', async () => {
+        const file = resumeInput.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            submitVerificationBtn.disabled = true;
+            submitVerificationBtn.textContent = "Uploading...";
+            
+            const compressedData = await compressImage(e.target.result);
+            
+            const res = await requestJson('/api/user/request-verification', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ doc: compressedData })
+            });
+
+            if (res.success) {
+                alert("Request submitted successfully!");
+                loadDashboard();
+            } else {
+                alert(res.message);
+                submitVerificationBtn.disabled = false;
+                submitVerificationBtn.textContent = "Submit for Review";
+            }
+        };
+        reader.readAsDataURL(file);
+    });
 
     function renderSubscriptionToggle(isSubscribed, updatedAt) {
         const infoPanel = document.querySelector('.profile-info');
@@ -122,13 +298,67 @@ document.addEventListener("DOMContentLoaded", () => {
         statsEl.innerHTML = `📊 Total Shop Views: <strong>${count.toLocaleString()}</strong>`;
     }
 
-    function updateAvatar(name, pic) {
+    function renderUserJobs(jobs) {
+        if (!userJobsGrid) return;
+        if (!jobs || jobs.length === 0) {
+            userJobsGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--muted); padding: 40px;">You haven\'t posted any service briefs yet.</p>';
+            return;
+        }
+
+        userJobsGrid.innerHTML = jobs.map(j => `
+            <div class="listing-card" style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">
+                <div style="padding: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                        <h3 style="color: var(--card-text); font-size: 1.2rem;">${j.title}</h3>
+                        <span style="background: ${j.status === 'active' ? '#dcfce7' : '#fee2e2'}; color: ${j.status === 'active' ? '#10b981' : '#ef4444'}; padding: 4px 10px; border-radius: 99px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">
+                            ${j.status}
+                        </span>
+                    </div>
+                    <p style="font-weight: 800; color: var(--accent-2); margin-bottom: 15px;">Budget: ${j.budget}</p>
+                    <p style="font-size: 0.9rem; color: #64748b;">Client: ${j.client_name} (${j.client_contact})</p>
+                    ${j.status === 'suspended' ? `
+                        <button onclick="openAppealModal(${j.id})" class="btn-view" style="width: 100%;">Appeal Suspension</button>
+                    ` : ''}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    window.openAppealModal = (id) => {
+        document.getElementById('appealJobId').value = id;
+        document.getElementById('appealReason').value = '';
+        appealModal.classList.add('active');
+    };
+
+    closeAppealModalBtn.onclick = () => appealModal.classList.remove('active');
+
+    appealForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('appealJobId').value;
+        const reason = document.getElementById('appealReason').value.trim();
+
+        const res = await requestJson(`/api/jobs/${id}/appeal`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason })
+        });
+
+        if (res.success) {
+            alert("Appeal submitted. You will be notified of the outcome.");
+            appealModal.classList.remove('active');
+        } else {
+            alert(res.message);
+        }
+    };
+
+    function updateAvatar(name, pic, isAdmin) {
+        const adminBadge = isAdmin ? '<div class="admin-badge-large" title="System Administrator"><i class="fas fa-crown"></i> ADMIN</div>' : '';
         if (pic) {
-            profilePicContainer.innerHTML = `<img src="${pic}" alt="Profile" class="profile-page-avatar">`;
+            profilePicContainer.innerHTML = `<div class="profile-avatar-wrap"><img src="${pic}" alt="Profile" class="profile-page-avatar">${adminBadge}</div>`;
         } else {
             const parts = (name || 'U').trim().split(/\s+/).filter(Boolean);
             const initials = parts.length === 1 ? parts[0][0] : (parts[0][0] + parts[parts.length - 1][0]);
-            profilePicContainer.innerHTML = `<div class="profile-page-initials">${initials.toUpperCase()}</div>`;
+            profilePicContainer.innerHTML = `<div class="profile-avatar-wrap"><div class="profile-page-initials">${initials.toUpperCase()}</div>${adminBadge}</div>`;
         }
     }
 
@@ -232,8 +462,8 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
         const reader = new FileReader();
-        reader.onload = (evt) => {
-            currentEditImageBase64 = evt.target.result;
+        reader.onload = async (evt) => {
+            currentEditImageBase64 = await compressImage(evt.target.result);
             editImagePreview.src = currentEditImageBase64;
             editImagePreviewContainer.style.display = 'block';
         };

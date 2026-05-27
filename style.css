@@ -1,0 +1,236 @@
+:root {
+    --bg-canvas: #F3F4F6;
+    --white: #FFFFFF;
+    --border: #E0E0E0;
+    --text-dark: #111827;
+    --text-muted: #6B7280;
+    --accent: #2563EB;
+}
+
+body {
+    margin: 0;
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: var(--bg-canvas);
+    color: var(--text-dark);
+}
+
+.navbar {
+    background: #0F172A;
+    padding: 12px 0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.navbar-content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo .brand { color: white; font-weight: 800; font-size: 1.25rem; text-decoration: none; }
+.logo .tagline { color: #94A3B8; font-size: 0.7rem; display: block; text-transform: uppercase; }
+.nav-actions { display: flex; gap: 20px; align-items: center; }
+.nav-back { color: white; text-decoration: none; font-size: 0.85rem; }
+
+.feed-container {
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+.feed-header { text-align: center; margin-bottom: 30px; }
+
+.job-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 16px;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+}
+
+.job-card:hover { 
+    transform: translateY(-5px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.1); 
+}
+
+.card-header { display: flex; gap: 12px; margin-bottom: 12px; }
+.avatar-circle { width: 48px; height: 48px; background: #E5E7EB; border-radius: 50%; }
+.meta-info h4 { margin: 0; font-size: 1rem; }
+.meta-info span { color: var(--text-muted); font-size: 0.8rem; }
+
+.job-title { color: var(--accent); font-size: 1.2rem; margin: 10px 0; font-weight: 700; }
+.job-desc { line-height: 1.5; color: #374151; font-size: 0.95rem; }
+
+.card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border);
+}
+
+.budget { font-weight: 700; color: #059669; }
+
+.btn-primary, .btn-submit, .btn-apply {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-apply:disabled { background: #D1D5DB; cursor: not-allowed; }
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 500px;
+    position: relative;
+}
+
+.close-modal { position: absolute; right: 20px; top: 15px; font-size: 1.5rem; cursor: pointer; }
+
+form input, form textarea {
+    width: 100%; padding: 12px; margin: 10px 0;
+    border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box;
+}
+
+.char-counter {
+    text-align: right;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: -8px;
+    margin-bottom: 10px;
+}
+
+.skill-badge-tag {
+    background: #EBF5FF;
+    color: #1E40AF;
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.skill-badge-tag i {
+    cursor: pointer;
+    font-size: 0.75rem;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.skill-badge-tag i:hover {
+    opacity: 1;
+}
+
+.skill-badge-tag.is-verified {
+    border: 1px solid #2563EB;
+    background: #F0F7FF;
+}
+
+.skill-verified-badge {
+    color: #2563EB;
+    font-size: 0.75rem;
+    margin-right: 2px;
+    pointer-events: none;
+}
+
+/* Admin Badge Styling */
+.avatar-nav-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.admin-badge-nav {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    background: #FFD700; /* Gold */
+    color: #000;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    border: 1px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.profile-avatar-wrap {
+    position: relative;
+}
+
+.admin-badge-large {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+    color: #000;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    border: 2px solid #0f172a;
+    white-space: nowrap;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Loading Spinner */
+.spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 0.6s linear infinite;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.spinner-overlay {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0,0,0,0.05);
+    border-radius: 12px;
+    min-height: 150px;
+    margin-top: 10px;
+}
+
+.btn-post .spinner, .btn-submit .spinner { margin-right: 8px; }

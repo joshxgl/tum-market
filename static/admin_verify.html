@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin - Taker Verification</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .admin-container { max-width: 800px; margin: 40px auto; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .user-row { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee; }
+        .user-info h4 { margin: 0; color: #1e293b; }
+        .user-info p { margin: 0; font-size: 0.85rem; color: #64748b; }
+        .skill-checklist { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 10px; }
+        .skill-check-item { 
+            background: #f1f5f9; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem;
+            display: flex; align-items: center; gap: 6px; cursor: pointer;
+        }
+        .skill-check-item input { margin: 0; width: auto; }
+        .btn-verify { background: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+        .btn-verify:hover { background: #1d4ed8; }
+        .btn-reject { background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+        .btn-reject:hover { background: #dc2626; }
+        .skill-badge-tag.is-verified { border: 1px solid #2563EB; background: #F0F7FF; padding: 2px 8px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; }
+        .skill-verified-badge { color: #2563EB; font-size: 0.7rem; }
+    </style>
+</head>
+<body style="background: #f8fafc;">
+    <nav class="navbar">
+        <div class="navbar-top">
+            <div class="logo"><span class="brand">ADMIN PANEL</span></div>
+            <a href="/" class="nav-link">Back to Market</a>
+        </div>
+    </nav>
+
+    <div class="admin-container">
+        <h2>Pending Skill Verifications</h2>
+        <p style="color: #64748b; margin-bottom: 20px;">Approve student profiles to grant them "Verified Taker" status.</p>
+        <div id="userList">Loading pending requests...</div>
+    </div>
+
+    <div class="admin-container" style="margin-top: 20px;">
+        <h2>User Management</h2>
+        <p style="color: #64748b; margin-bottom: 20px;">Manage user accounts and suspensions.</p>
+        <div id="allUserList">Loading users...</div>
+    </div>
+
+    <div class="admin-container" style="margin-top: 20px;">
+        <h2>Pending Job Reports</h2>
+        <p style="color: #64748b; margin-bottom: 20px;">Review reported job postings for violations.</p>
+        <div id="reportList">No pending reports.</div>
+    </div>
+
+    <div class="admin-container" style="margin-top: 20px;">
+        <h2>Pending Job Appeals</h2>
+        <p style="color: #64748b; margin-bottom: 20px;">Review appeals for suspended job postings.</p>
+        <div id="appealList">Loading appeals...</div>
+    </div>
+
+    <div class="admin-container" style="margin-top: 20px;">
+        <h2>Job Postings Management</h2>
+        <p style="color: #64748b; margin-bottom: 20px;">View all active job postings and their applicants.</p>
+        <div id="adminJobsList">Loading jobs...</div>
+    </div>
+
+    <!-- Applications Modal -->
+    <div class="modal" id="applicationsModal">
+        <div class="modal-content" style="max-width: 700px; color: #1e293b;">
+            <span class="close-btn" id="closeAppsModalBtn">&times;</span>
+            <h2 id="appsModalTitle">Applications</h2>
+            <div id="appsListContent" style="margin-top: 20px; max-height: 400px; overflow-y: auto;"></div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchUnverified() {
+            const res = await fetch('/api/admin/unverified-takers');
+            const data = await res.json();
+            const container = document.getElementById('userList');
+
+            if (!data.success) {
+                container.innerHTML = `<p style="color: red;">${data.message}</p>`;
+                return;
+            }
+
+            if (data.users.length === 0) {
+                container.innerHTML = '<p>No pending verification requests.</p>';
+                return;
+            }
+
+            container.innerHTML = data.users.map(u => `
+                <div class="user-row">
+                    <div class="user-info">
+                        <h4>${u.name}</h4>
+                        <p>${u.email}</p>
+                        <a href="${u.doc}" target="_blank" style="font-size: 0.8rem; color: #2563eb; text-decoration: underline;">View Verification Image</a>
+                        <div class="skill-checklist">
+                            ${(u.skills || "").split(',').map(s => s.trim()).filter(Boolean).map(skill => `
+                                <label class="skill-check-item">
+                                    <input type="checkbox" class="skill-checkbox-${u.id}" value="${skill}" checked>
+                                    ${skill}
+                                </label>
+                            `).join('')}
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <textarea id="reason-${u.id}" placeholder="Provide feedback for rejection..." style="width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; font-size: 0.85rem; outline: none;"></textarea>
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 8px; margin-left: 20px;">
+                        <button class="btn-verify" onclick="verifyUser(${u.id})">Approve</button>
+                        <button class="btn-reject" onclick="rejectUser(${u.id})">Reject</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function verifyUser(id) {
+            const selectedSkills = Array.from(document.querySelectorAll(`.skill-checkbox-${id}:checked`)).map(cb => cb.value);
+            
+            if (!confirm(`Verify this user with ${selectedSkills.length} confirmed skills?`)) return;
+            
+            const res = await fetch(`/api/admin/verify-taker/${id}`, { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ verified_skills: selectedSkills })
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                fetchUnverified();
+            } else {
+                alert(data.message);
+            }
+        }
+
+        async function fetchAllUsers() {
+            const res = await fetch('/api/admin/users');
+            const data = await res.json();
+            const container = document.getElementById('allUserList');
+
+            if (!data.success) {
+                container.innerHTML = `<p style="color: red;">${data.message}</p>`;
+                return;
+            }
+
+            container.innerHTML = data.users.map(u => `
+                <div class="user-row">
+                    <div class="user-info">
+                        <h4>${u.name} ${u.is_admin ? '<span style="color: #2563eb; font-size: 0.7rem;">(Admin)</span>' : ''}</h4>
+                        <p>${u.email}</p>
+                        <p style="color: ${u.is_suspended ? '#ef4444' : '#10b981'}; font-weight: bold; font-size: 0.8rem;">Status: ${u.is_suspended ? 'Suspended' : 'Active'}</p>
+                    </div>
+                    <button class="${u.is_suspended ? 'btn-verify' : 'btn-reject'}" 
+                            style="${u.is_admin ? 'display:none' : ''}"
+                            onclick="toggleSuspension(${u.id})">${u.is_suspended ? 'Unsuspend' : 'Suspend'}</button>
+                </div>
+            `).join('');
+        }
+
+        async function toggleSuspension(id) {
+            if (!confirm("Confirm action on this user account?")) return;
+            const res = await fetch(`/api/admin/toggle-suspension/${id}`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) fetchAllUsers(); else alert(data.message);
+        }
+
+        async function rejectUser(id) {
+            const reason = document.getElementById(`reason-${id}`).value.trim();
+            if (!reason) {
+                alert("Please provide a reason for rejection.");
+                return;
+            }
+
+            if (!confirm("Confirm rejection of this request?")) return;
+            
+            const res = await fetch(`/api/admin/reject-taker/${id}`, { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason: reason })
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                fetchUnverified();
+            } else {
+                alert(data.message);
+            }
+        }
+
+        async function fetchPendingReports() {
+            const res = await fetch('/api/admin/reports');
+            const data = await res.json();
+            const container = document.getElementById('reportList');
+
+            if (!data.success) {
+                container.innerHTML = `<p style="color: red;">${data.message}</p>`;
+                return;
+            }
+
+            if (data.reports.length === 0) {
+                container.innerHTML = '<p>No pending reports.</p>';
+                return;
+            }
+
+            container.innerHTML = data.reports.map(r => `
+                <div class="user-row">
+                    <div class="user-info">
+                        <h4>Report ID: ${r.id} for Job ID: ${r.job_id}</h4>
+                        <p>Reason: ${r.reason}</p>
+                        <p style="font-size: 0.75rem; color: #94a3b8;">Reported: ${new Date(r.created_at).toLocaleString()}</p>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 8px; margin-left: 20px;">
+                        <button class="btn-verify" onclick="reviewReport(${r.id}, 'approve')">Review & Dismiss</button>
+                        <button class="btn-reject" onclick="reviewReport(${r.id}, 'reject')">Take Action on Job</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function reviewReport(reportId, action) {
+            const apiAction = action === 'approve' ? 'dismiss' : 'suspend';
+            let reason = '';
+
+            if (apiAction === 'suspend') {
+                reason = prompt("Please provide a reason for the job suspension:");
+                if (reason === null) return; // User cancelled
+                if (!reason.trim()) {
+                    alert("A reason is required to suspend a job.");
+                    return;
+                }
+            } else {
+                const confirmMsg = "Are you sure you want to dismiss this report? No action will be taken on the job.";
+                if (!confirm(confirmMsg)) return;
+            }
+
+            const res = await fetch(`/api/admin/reports/${reportId}/action`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: apiAction, reason: reason })
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                fetchPendingReports();
+            } else {
+                alert(data.message);
+            }
+        }
+
+        async function fetchAppeals() {
+            const res = await fetch('/api/admin/appeals');
+            const data = await res.json();
+            const container = document.getElementById('appealList');
+
+            if (!data.success) {
+                container.innerHTML = `<p style="color: red;">${data.message}</p>`;
+                return;
+            }
+
+            if (data.appeals.length === 0) {
+                container.innerHTML = '<p>No pending appeals.</p>';
+                return;
+            }
+
+            container.innerHTML = data.appeals.map(a => `
+                <div class="user-row">
+                    <div class="user-info">
+                        <h4>Appeal ID: ${a.id} (Job ID: ${a.job_id})</h4>
+                        <p><strong>Reason:</strong> ${a.reason}</p>
+                        <p style="font-size: 0.75rem; color: #94a3b8;">Submitted: ${new Date(a.created_at).toLocaleString()}</p>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 8px; margin-left: 20px;">
+                        <button class="btn-verify" onclick="reviewAppeal(${a.id}, 'approve')">Reinstate Job</button>
+                        <button class="btn-reject" onclick="reviewAppeal(${a.id}, 'reject')">Deny Appeal</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function reviewAppeal(appealId, action) {
+            if (!confirm(`Confirm ${action} for this appeal?`)) return;
+
+            const res = await fetch(`/api/admin/appeals/${appealId}/action`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action })
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                fetchAppeals();
+            } else {
+                alert(data.message);
+            }
+        }
+
+        async function fetchAdminJobs() {
+            const res = await fetch('/api/admin/jobs');
+            const data = await res.json();
+            const container = document.getElementById('adminJobsList');
+
+            if (!data.success) {
+                container.innerHTML = `<p style="color: red;">${data.message}</p>`;
+                return;
+            }
+
+            if (data.jobs.length === 0) {
+                container.innerHTML = '<p>No job postings found.</p>';
+                return;
+            }
+
+            container.innerHTML = data.jobs.map(j => `
+                <div class="user-row">
+                    <div class="user-info">
+                        <h4>${j.title}</h4>
+                        <p>Posted by: ${j.poster} • Status: ${j.status}</p>
+                    </div>
+                    <button class="btn-verify" onclick="viewApplications(${j.id})">View Applications</button>
+                </div>
+            `).join('');
+        }
+
+        async function viewApplications(jobId) {
+            const res = await fetch(`/api/admin/jobs/${jobId}/applications`);
+            const data = await res.json();
+            const content = document.getElementById('appsListContent');
+            const modal = document.getElementById('applicationsModal');
+
+            if (!data.success) {
+                alert(data.message);
+                return;
+            }
+
+            document.getElementById('appsModalTitle').textContent = `Applications for: ${data.job_title}`;
+
+            if (data.applications.length === 0) {
+                content.innerHTML = '<p>No applications yet.</p>';
+            } else {
+                content.innerHTML = data.applications.map(a => `
+                    <div style="border-bottom: 1px solid #eee; padding: 15px 0;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <strong>${a.talent.name}</strong>
+                            <span style="font-size: 0.8rem; color: #64748b;">Applied: ${new Date(a.applied_at).toLocaleDateString()}</span>
+                        </div>
+                        <p style="font-size: 0.85rem; margin: 5px 0;">${a.talent.email} • ${a.talent.phone}</p>
+                        <div style="display: flex; gap: 5px; flex-wrap: wrap; margin: 10px 0;">
+                            ${a.talent.verified_skills.map(s => `<span class="skill-badge-tag is-verified"><i class="fas fa-certificate skill-verified-badge"></i>${s}</span>`).join('')}
+                        </div>
+                        ${a.talent.resume ? `<a href="${a.talent.resume}" target="_blank" style="font-size: 0.8rem; color: #2563eb; text-decoration: underline;">View Resume (PDF)</a>` : ''}
+                    </div>
+                `).join('');
+            }
+
+            modal.classList.add('active');
+        }
+
+        document.getElementById('closeAppsModalBtn').onclick = () => {
+            document.getElementById('applicationsModal').classList.remove('active');
+        };
+
+        // Security check on load
+        async function init() {
+            const res = await fetch('/api/user/session');
+            const data = await res.json();
+            if (!data.logged_in || !data.is_admin) {
+                alert("Unauthorized access.");
+                window.location.href = '/';
+                return;
+            }
+            fetchUnverified();
+            fetchPendingReports();
+            fetchAppeals();
+            fetchAllUsers();
+            fetchAdminJobs();
+        }
+
+        init();
+    </script>
+</body>
+</html>
