@@ -35,6 +35,13 @@ app.secret_key = os.environ.get('SECRET_KEY', 'tum_market_secret')
 
 # --- Gemini Matchmaking Models & Client ---
 client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+if GEMINI_API_KEY:
+    client = genai.Client(api_key=GEMINI_API_KEY)
+else:
+    client = None
+    if not os.environ.get('RENDER'):
+        print("⚠️ WARNING: GEMINI_API_KEY is missing. Matchmaking features will be disabled.")
 
 class TakerMatch(BaseModel):
     talent_id: int
@@ -304,11 +311,11 @@ class Notification(db.Model):
 with app.app_context():
     db.create_all()
     
-    # Initialize IntaSend Sandbox Keys securely
-    INTASEND_PUBLISHABLE_KEY = os.environ.get('INTASEND_PUBLISHABLE_KEY')
-    INTASEND_SECRET_KEY = os.environ.get('INTASEND_SECRET_KEY')
+    # Store IntaSend Keys in app config so they are accessible in routes
+    app.config['INTASEND_PUBLISHABLE_KEY'] = os.environ.get('INTASEND_PUBLISHABLE_KEY')
+    app.config['INTASEND_SECRET_KEY'] = os.environ.get('INTASEND_SECRET_KEY')
     
-    if not all([INTASEND_PUBLISHABLE_KEY, INTASEND_SECRET_KEY]):
+    if not all([app.config['INTASEND_PUBLISHABLE_KEY'], app.config['INTASEND_SECRET_KEY']]):
         if not app.debug:
             # In production, we should know if billing is broken immediately
             app.logger.critical("🚨 CRITICAL: IntaSend API keys are missing from environment!")
@@ -950,6 +957,10 @@ def dispatch_alerts(matches: List[TakerMatch], job_title: str):
 def run_matchmaking_pipeline(job):
     """Queries verified talent, evaluates semantics via Gemini, and returns structured matches."""
     # 1. Query the Talent Pool (Verified Takers)
+    if not client:
+        app.logger.error("Matchmaking skipped: Gemini Client not initialized.")
+        return []
+
     verified_users = db.session.execute(
         db.select(User).filter_by(is_skill_verified=True, is_suspended=False)
     ).scalars().all()
@@ -979,7 +990,7 @@ def run_matchmaking_pipeline(job):
     try:
         # 3. Gemini Semantic Matching
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-1.5-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
                 temperature=0.1,
